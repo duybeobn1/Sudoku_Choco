@@ -19,9 +19,12 @@
 3. **Block constraints:**  
    For each 3x3 block, the 9 variables inside must take distinct values (allDifferent). Blocks are defined as:
 
-   $
-   \{X_{r, c} \mid r = 3m+u, c = 3n+v, \quad m,n \in \{0,1,2\}, u,v \in \{1,2,3\}\}
-   $
+$$
+X_{r,c} \quad|\quad 
+r = 3m + u, \; c = 3n + v, \;
+m,n \in \{0,1,2\}, \;
+u,v \in \{1,2,3\}
+$$
 
 4. **Known cells:**  
    Some cells are fixed by the puzzle clues. Set those variables to their known value (equality constraint).
