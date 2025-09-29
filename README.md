@@ -42,12 +42,6 @@ $$
 - For rows/columns/blocks: use `model.allDifferent()` constraint.
 - For clues: use `grid[i][j].eq(clueValue).post();`
 
-***
-
-Would you like a ready-to-run Java code example using Choco Solver that models Sudoku with these constraints?Voici un aperçu pour modéliser le problème Sudoku avec un solveur de contraintes comme Choco :
-
-***
-
 ## Variables
 
 - Une matrice 9x9 de variables entières $$X_{i,j}$$, $$i,j \in [1..9]$$
