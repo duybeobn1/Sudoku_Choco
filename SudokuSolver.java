@@ -1,8 +1,26 @@
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.variables.IntVar;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.io.IOException;
+import java.util.List;
+
 public class SudokuSolver {
-    public static void main(String[] args) {
+
+    public static int[][] readPuzzleFromFile(String filepath) throws IOException {
+        List<String> lines = Files.readAllLines(Paths.get(filepath));
+        int[][] puzzle = new int[9][9];
+        for (int i = 0; i < 9; i++) {
+            String[] tokens = lines.get(i).trim().split("\\s+");
+            for (int j = 0; j < 9; j++) {
+                puzzle[i][j] = Integer.parseInt(tokens[j]);
+            }
+        }
+        return puzzle;
+    }
+
+    public static void main(String[] args) throws IOException {
         // Create model
         Model model = new Model("Sudoku");
 
@@ -37,18 +55,8 @@ public class SudokuSolver {
             }
         }
 
-        // Sample Sudoku clues (0 means unknown)
-        int[][] puzzle = {
-            {5, 3, 0, 0, 7, 0, 0, 0, 0},
-            {6, 0, 0, 1, 9, 5, 0, 0, 0},
-            {0, 9, 8, 0, 0, 0, 0, 6, 0},
-            {8, 0, 0, 0, 6, 0, 0, 0, 3},
-            {4, 0, 0, 8, 0, 3, 0, 0, 1},
-            {7, 0, 0, 0, 2, 0, 0, 0, 6},
-            {0, 6, 0, 0, 0, 0, 2, 8, 0},
-            {0, 0, 0, 4, 1, 9, 0, 0, 5},
-            {0, 0, 0, 0, 8, 0, 0, 7, 9}
-        };
+        // Read Sudoku puzzle from file
+        int[][] puzzle = readPuzzleFromFile("sudoku.txt");
 
         // Post clues as equality constraints
         for (int i = 0; i < 9; i++) {
