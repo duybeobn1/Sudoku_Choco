@@ -58,3 +58,6 @@ $$
 
 - Trouver une affectation complète des variables satisfaisant toutes les contraintes
 
+
+## Link for benchmark
+- https://www.hakank.org/minizinc/sudoku_problems2/index.html
