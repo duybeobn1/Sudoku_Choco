@@ -3,9 +3,7 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.search.limits.FailCounter;
 import org.chocosolver.solver.search.strategy.Search;
 import org.chocosolver.solver.variables.IntVar;
-// NEW IMPORTS for robustness: ESat
 import org.chocosolver.util.ESat;
-// REMOVED: import org.chocosolver.solver.search.restart.Restarts;
 
 import java.io.*;
 import java.net.URL;
@@ -22,7 +20,11 @@ public class SudokuBenchmark {
     private static final String BASE_URL = "https://www.hakank.org/minizinc/sudoku_problems2/";
     private static final String LOCAL_DIR = "benchmarks";
     
+    // Test instances: 9x9, 9x9, 16x16, 25x25
     private static final int[] INSTANCE_INDICES = {0, 1, 36, 89}; 
+    
+    // Increased time limit to let the naive strategy run longer on the large puzzles
+    private static final String TIME_LIMIT = "60s"; 
 
     public static void main(String[] args) {
         System.out.println("=== SUDOKU SOLVER BENCHMARK (Choco Solver) ===");
@@ -50,30 +52,39 @@ public class SudokuBenchmark {
                 instances.add(MiniZincParser.parse(file));
             } catch (Exception e) {
                 System.err.println("Error parsing " + filename + ": " + e.getMessage());
-                e.printStackTrace();
             }
         }
 
         // 2. Run Comparison
-        System.out.printf("%n%-15s | %-6s | %-20s | %-10s | %-10s | %-10s%n", 
-            "Instance", "Size", "Strategy", "Time(s)", "Nodes", "Result");
-        System.out.println("----------------------------------------------------------------------------------------");
+        // Updated header to include the new 'Fails' column
+        System.out.printf("%n%-15s | %-6s | %-20s | %-10s | %-10s | %-10s | %-10s%n", 
+            "Instance", "Size", "Strategy", "Time(s)", "Nodes", "Fails", "Result");
+        System.out.println("---------------------------------------------------------------------------------------------------");
 
         for (SudokuInstance inst : instances) {
-            // METHOD A: General / Naive (InputOrder)
-            solve(inst, "Default/InputOrder", false);
+            // METHOD A: Naive Baseline (InputOrder)
+            solve(inst, "Default/InputOrder", SearchStrategy.INPUT_ORDER);
 
-            // METHOD B: Optimized / Tuned (DomOverWDeg + Restarts)
-            solve(inst, "Tuned/DomOverWDeg", true);
+            // METHOD B: Optimized CP Heuristic (DomOverWDeg + Restarts)
+            solve(inst, "Tuned/DomOverWDeg", SearchStrategy.DOM_OVER_WDEG);
             
-            System.out.println("----------------------------------------------------------------------------------------");
+            // METHOD C: Human-Inspired Heuristic (Random Order)
+            // Simulates a non-sequential, non-optimized "human glance" approach for a third baseline
+            solve(inst, "Human/RandomOrder", SearchStrategy.RANDOM);
+
+            System.out.println("---------------------------------------------------------------------------------------------------");
         }
     }
 
     // ==========================================
-    // SOLVER ENGINE
+    // SOLVER ENGINE & STRATEGIES
     // ==========================================
-    private static void solve(SudokuInstance instance, String strategyName, boolean optimized) {
+    
+    private enum SearchStrategy {
+        INPUT_ORDER, DOM_OVER_WDEG, RANDOM
+    }
+    
+    private static void solve(SudokuInstance instance, String strategyName, SearchStrategy strategy) {
         int n = instance.n;       // Block size (e.g., 3)
         int N = n * n;            // Grid size (e.g., 9)
         
@@ -97,32 +108,39 @@ public class SudokuBenchmark {
         // Constraints: Clues (Given numbers)
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                if (instance.grid[i][j]!= 0) {
+                if (instance.grid[i][j] != 0) {
                     model.arithm(grid[i][j], "=", instance.grid[i][j]).post();
                 }
             }
         }
 
-        // 2. Configure Solver Parameters (The Core Task)
+        // 2. Configure Solver Parameters
         Solver solver = model.getSolver();
-        
         IntVar[] allVars = flatten(grid);
 
-        if (optimized) {
-            // --- MODIFIED PARAMETERS ---
-            solver.setSearch(Search.domOverWDegSearch(allVars));
-            
-            // FIX E: Corrected Luby Restart using the older, stable setLubyRestart signature
-            // (base, counter, scaleFactor)
-            solver.setLubyRestart(500, new FailCounter(model, 1), 2);
-
-        } else {
-            // --- DEFAULT / GENERAL PARAMETERS ---
-            solver.setSearch(Search.inputOrderLBSearch(allVars));
+        switch (strategy) {
+            case DOM_OVER_WDEG:
+                // Tuned CP Heuristic: Fail-First Variable Ordering + Restarts
+                solver.setSearch(Search.domOverWDegSearch(allVars));
+                // Luby Restart: Helps escape large thrashing subtrees on difficult problems
+                // Using the older stable method signature: (base, counter, limit)
+                solver.setLubyRestart(500, new FailCounter(model, 1), 2);
+                break;
+            case RANDOM:
+                // Human/Random Heuristic: Naive variable ordering with randomization
+                List<IntVar> randomVars = new ArrayList<>(Arrays.asList(allVars));
+                Collections.shuffle(randomVars, new Random(42)); // Fixed seed for reproducible random order
+                solver.setSearch(Search.inputOrderLBSearch(randomVars.toArray(new IntVar[0])));
+                break;
+            case INPUT_ORDER:
+            default:
+                // Default Baseline: Naive sequential variable ordering
+                solver.setSearch(Search.inputOrderLBSearch(allVars));
+                break;
         }
 
-        // Limit time to prevent infinite hangs on the naive method
-        solver.limitTime("10s"); 
+        // Set time limit for all strategies
+        solver.limitTime(TIME_LIMIT); 
 
         // 3. Solve & Measure
         solver.solve();
@@ -130,14 +148,15 @@ public class SudokuBenchmark {
         // 4. Report
         String time = String.format("%.3f", solver.getTimeCount());
         long nodes = solver.getNodeCount();
+        long fails = solver.getFailCount(); // Captures the number of backtracks/conflicts
         
-        // FIX F: Status check using ESat
         String status = solver.isFeasible() == ESat.TRUE ? "SAT" : "UNKNOWN";
         
         if (solver.isStopCriterionMet()) status = "TIMEOUT";
 
-        System.out.printf("%-15s | %dx%d | %-20s | %-10s | %-10d | %-10s%n", 
-            instance.name, N, N, strategyName, time, nodes, status);
+        // Print results including Failures
+        System.out.printf("%-15s | %dx%d | %-20s | %-10s | %-10d | %-10d | %-10s%n", 
+            instance.name, N, N, strategyName, time, nodes, fails, status);
     }
 
     // ==========================================
@@ -196,7 +215,7 @@ public class SudokuBenchmark {
         }
     }
 
-    // Parser for Hakank's .dzn files (Handles underscores and dimensions)
+    // Final, robust MiniZinc Parser (Handles underscores, dimensions, and auto-detects size)
     static class MiniZincParser {
         public static SudokuInstance parse(File file) throws IOException {
             BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -208,15 +227,13 @@ public class SudokuBenchmark {
                 // Skip comments
                 if (line.isEmpty() || line.startsWith("%")) continue;
 
-                // CRITICAL FIX 1: Convert MiniZinc empty cell '_' to '0'
+                // FIX 1: Convert MiniZinc empty cell '_' to '0'
                 line = line.replace("_", "0");
 
-                // CRITICAL FIX 2: Remove dimension definitions like "1..n" or "1..9"
-                // Otherwise, the parser reads these '1's as part of the puzzle.
+                // FIX 2: Remove dimension definitions (e.g., "1..n")
                 line = line.replaceAll("\\d+\\.\\.[a-zA-Z0-9]+", " ");
 
-                // CRITICAL FIX 3: Skip metadata lines like "n = 9;" or "int: N = 9;"
-                // We only want the array data. 
+                // FIX 3: Skip metadata lines (e.g., "n = 9;")
                 if (line.matches(".*[a-zA-Z0-9]+\\s*=\\s*\\d+;")) continue;
 
                 // Remove "array2d" keyword so the '2' isn't read
@@ -234,18 +251,15 @@ public class SudokuBenchmark {
                              .mapToInt(Integer::parseInt)
                              .toArray();
             
-            // AUTO-DETECT Size Logic
-            // Total Cells = N*N. Therefore N = sqrt(Total Cells).
+            // AUTO-DETECT Size Logic: Total Cells = N*N. N = sqrt(Total Cells). n = sqrt(N).
             int totalCells = data.length;
             int N = (int) Math.sqrt(totalCells); 
-            // In Sudoku, N is n*n (e.g., 9 = 3*3). So n = sqrt(N).
             int n = (int) Math.sqrt(N);          
 
-            // Validation: Ensure it's a perfect square
+            // Validation: Ensure it's a valid Sudoku size (a perfect fourth power)
             if (N * N != totalCells) {
                  throw new IOException("Invalid data count: Found " + totalCells + 
-                                       " numbers. This is not a perfect square (e.g., 81, 256). " +
-                                       "Check if dimensions (1..n) or underscores (_) are being parsed incorrectly.");
+                                       " numbers. Not a valid Sudoku square (N^2).");
             }
             
             return new SudokuInstance(file.getName(), n, data);
