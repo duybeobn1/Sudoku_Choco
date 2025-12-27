@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.IntStream;
+import java.text.DecimalFormat;
 
 public class SudokuBenchmark {
 
@@ -24,10 +25,17 @@ public class SudokuBenchmark {
     private static final int[] INSTANCE_INDICES = {0, 1, 36, 89}; 
     
     // Increased time limit to let the naive strategy run longer on the large puzzles
-    private static final String TIME_LIMIT = "60s"; 
+    private static final String TIME_LIMIT = "60s";
+    
+    // Number of runs for statistical analysis
+    private static final int BENCHMARK_RUNS = 5;
+    
+    // CSV output file
+    private static final String CSV_OUTPUT = "benchmark_results.csv";
 
     public static void main(String[] args) {
         System.out.println("=== SUDOKU SOLVER BENCHMARK (Choco Solver) ===");
+        System.out.println("Runs per configuration: " + BENCHMARK_RUNS);
         
         // 1. Prepare Data
         List<SudokuInstance> instances = new ArrayList<>();
@@ -55,25 +63,35 @@ public class SudokuBenchmark {
             }
         }
 
-        // 2. Run Comparison
-        // Updated header to include the new 'Fails' column
-        System.out.printf("%n%-15s | %-6s | %-20s | %-10s | %-10s | %-10s | %-10s%n", 
-            "Instance", "Size", "Strategy", "Time(s)", "Nodes", "Fails", "Result");
-        System.out.println("---------------------------------------------------------------------------------------------------");
+        // 2. Run Comparison with Multiple Runs
+        List<BenchmarkRecord> allResults = new ArrayList<>();
+        
+        System.out.printf("%n%-15s | %-6s | %-8s | %-8s | %-20s | %-12s | %-12s | %-12s | %-12s | %-10s%n", 
+            "Instance", "Size", "Clues", "Density", "Strategy", "Time(s)", "Nodes", "Fails", "Memory(KB)", "Result");
+        System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
 
         for (SudokuInstance inst : instances) {
+            System.out.printf("%n[Instance: %s - %dx%d - %d clues (%.1f%% density)]%n", 
+                inst.name, inst.n * inst.n, inst.n * inst.n, inst.countGivenClues(), inst.getDensity() * 100);
+            
             // METHOD A: Naive Baseline (InputOrder)
-            solve(inst, "Default/InputOrder", SearchStrategy.INPUT_ORDER);
+            solveMultipleRuns(inst, "Default/InputOrder", SearchStrategy.INPUT_ORDER, allResults);
 
             // METHOD B: Optimized CP Heuristic (DomOverWDeg + Restarts)
-            solve(inst, "Tuned/DomOverWDeg", SearchStrategy.DOM_OVER_WDEG);
+            solveMultipleRuns(inst, "Tuned/DomOverWDeg", SearchStrategy.DOM_OVER_WDEG, allResults);
             
-            // METHOD C: Human-Inspired Heuristic (Random Order)
-            // Simulates a non-sequential, non-optimized "human glance" approach for a third baseline
-            solve(inst, "Human/RandomOrder", SearchStrategy.RANDOM);
+            // METHOD C: First-Fail Heuristic (MinDomSize)
+            solveMultipleRuns(inst, "FirstFail/MinDom", SearchStrategy.MIN_DOM_SIZE, allResults);
+            
+            // METHOD D: Human-Inspired Heuristic (Random Order)
+            solveMultipleRuns(inst, "Human/RandomOrder", SearchStrategy.RANDOM, allResults);
 
-            System.out.println("---------------------------------------------------------------------------------------------------");
+            System.out.println("------------------------------------------------------------------------------------------------------------------------------------");
         }
+        
+        // 3. Write CSV Output
+        writeResultsToCSV(allResults);
+        System.out.println("%nResults exported to: " + CSV_OUTPUT);
     }
 
     // ==========================================
@@ -81,10 +99,50 @@ public class SudokuBenchmark {
     // ==========================================
     
     private enum SearchStrategy {
-        INPUT_ORDER, DOM_OVER_WDEG, RANDOM
+        INPUT_ORDER, DOM_OVER_WDEG, MIN_DOM_SIZE, RANDOM
     }
     
-    private static void solve(SudokuInstance instance, String strategyName, SearchStrategy strategy) {
+    private static void solveMultipleRuns(SudokuInstance instance, String strategyName, 
+                                           SearchStrategy strategy, List<BenchmarkRecord> allResults) {
+        List<Double> times = new ArrayList<>();
+        List<Long> nodes = new ArrayList<>();
+        List<Long> fails = new ArrayList<>();
+        List<Long> memories = new ArrayList<>();
+        int successCount = 0;
+        
+        for (int run = 0; run < BENCHMARK_RUNS; run++) {
+            BenchmarkResult result = solveSingle(instance, strategyName, strategy);
+            if (result.success) successCount++;
+            times.add(result.time);
+            nodes.add(result.nodes);
+            fails.add(result.fails);
+            memories.add(result.memoryKB);
+        }
+        
+        // Compute statistics
+        double meanTime = computeMean(times);
+        double stdDevTime = computeStdDev(times, meanTime);
+        long meanNodes = (long) computeMean(nodes.stream().mapToDouble(Long::doubleValue).boxed().collect(java.util.stream.Collectors.toList()));
+        long meanFails = (long) computeMean(fails.stream().mapToDouble(Long::doubleValue).boxed().collect(java.util.stream.Collectors.toList()));
+        long meanMemory = (long) computeMean(memories.stream().mapToDouble(Long::doubleValue).boxed().collect(java.util.stream.Collectors.toList()));
+        
+        String status = successCount == BENCHMARK_RUNS ? "SAT" : 
+                       (successCount > 0 ? "PARTIAL(" + successCount + "/" + BENCHMARK_RUNS + ")" : "TIMEOUT");
+        
+        DecimalFormat df = new DecimalFormat("#.###");
+        
+        System.out.printf("%-15s | %dx%d | %-8d | %6.1f%% | %-20s | %s±%s | %-12d | %-12d | %-12d | %-10s%n", 
+            instance.name, instance.n * instance.n, instance.n * instance.n, 
+            instance.countGivenClues(), instance.getDensity() * 100,
+            strategyName, df.format(meanTime), df.format(stdDevTime), 
+            meanNodes, meanFails, meanMemory, status);
+        
+        // Store for CSV export
+        allResults.add(new BenchmarkRecord(instance, strategyName, strategy, 
+            meanTime, stdDevTime, meanNodes, meanFails, meanMemory, status));
+    }
+    
+    private static BenchmarkResult solveSingle(SudokuInstance instance, String strategyName, SearchStrategy strategy) {
         int n = instance.n;       // Block size (e.g., 3)
         int N = n * n;            // Grid size (e.g., 9)
         
@@ -123,13 +181,16 @@ public class SudokuBenchmark {
                 // Tuned CP Heuristic: Fail-First Variable Ordering + Restarts
                 solver.setSearch(Search.domOverWDegSearch(allVars));
                 // Luby Restart: Helps escape large thrashing subtrees on difficult problems
-                // Using the older stable method signature: (base, counter, limit)
                 solver.setLubyRestart(500, new FailCounter(model, 1), 2);
+                break;
+            case MIN_DOM_SIZE:
+                // First-Fail Principle: Choose variable with smallest domain first
+                solver.setSearch(Search.minDomLBSearch(allVars));
                 break;
             case RANDOM:
                 // Human/Random Heuristic: Naive variable ordering with randomization
                 List<IntVar> randomVars = new ArrayList<>(Arrays.asList(allVars));
-                Collections.shuffle(randomVars, new Random(42)); // Fixed seed for reproducible random order
+                Collections.shuffle(randomVars, new Random(System.nanoTime())); // Different seed each run
                 solver.setSearch(Search.inputOrderLBSearch(randomVars.toArray(new IntVar[0])));
                 break;
             case INPUT_ORDER:
@@ -140,23 +201,27 @@ public class SudokuBenchmark {
         }
 
         // Set time limit for all strategies
-        solver.limitTime(TIME_LIMIT); 
+        solver.limitTime(TIME_LIMIT);
+        
+        // 3. Measure Memory Before
+        Runtime runtime = Runtime.getRuntime();
+        runtime.gc(); // Suggest garbage collection for more accurate measurement
+        long memoryBefore = runtime.totalMemory() - runtime.freeMemory();
 
-        // 3. Solve & Measure
+        // 4. Solve & Measure
         solver.solve();
 
-        // 4. Report
-        String time = String.format("%.3f", solver.getTimeCount());
-        long nodes = solver.getNodeCount();
-        long fails = solver.getFailCount(); // Captures the number of backtracks/conflicts
-        
-        String status = solver.isFeasible() == ESat.TRUE ? "SAT" : "UNKNOWN";
-        
-        if (solver.isStopCriterionMet()) status = "TIMEOUT";
+        // 5. Measure Memory After
+        long memoryAfter = runtime.totalMemory() - runtime.freeMemory();
+        long memoryUsedKB = (memoryAfter - memoryBefore) / 1024;
 
-        // Print results including Failures
-        System.out.printf("%-15s | %dx%d | %-20s | %-10s | %-10d | %-10d | %-10s%n", 
-            instance.name, N, N, strategyName, time, nodes, fails, status);
+        // 6. Collect Results
+        double time = solver.getTimeCount();
+        long nodes = solver.getNodeCount();
+        long fails = solver.getFailCount();
+        boolean success = solver.isFeasible() == ESat.TRUE && !solver.isStopCriterionMet();
+        
+        return new BenchmarkResult(time, nodes, fails, memoryUsedKB, success);
     }
 
     // ==========================================
@@ -213,6 +278,64 @@ public class SudokuBenchmark {
                 }
             }
         }
+        
+        public int countGivenClues() {
+            int count = 0;
+            int N = n * n;
+            for (int i = 0; i < N; i++) {
+                for (int j = 0; j < N; j++) {
+                    if (grid[i][j] != 0) count++;
+                }
+            }
+            return count;
+        }
+        
+        public double getDensity() {
+            int N = n * n;
+            return (double) countGivenClues() / (N * N);
+        }
+    }
+    
+    static class BenchmarkResult {
+        double time;
+        long nodes;
+        long fails;
+        long memoryKB;
+        boolean success;
+        
+        public BenchmarkResult(double time, long nodes, long fails, long memoryKB, boolean success) {
+            this.time = time;
+            this.nodes = nodes;
+            this.fails = fails;
+            this.memoryKB = memoryKB;
+            this.success = success;
+        }
+    }
+    
+    static class BenchmarkRecord {
+        SudokuInstance instance;
+        String strategyName;
+        SearchStrategy strategy;
+        double meanTime;
+        double stdDevTime;
+        long meanNodes;
+        long meanFails;
+        long meanMemory;
+        String status;
+        
+        public BenchmarkRecord(SudokuInstance instance, String strategyName, SearchStrategy strategy,
+                             double meanTime, double stdDevTime, long meanNodes, long meanFails, 
+                             long meanMemory, String status) {
+            this.instance = instance;
+            this.strategyName = strategyName;
+            this.strategy = strategy;
+            this.meanTime = meanTime;
+            this.stdDevTime = stdDevTime;
+            this.meanNodes = meanNodes;
+            this.meanFails = meanFails;
+            this.meanMemory = meanMemory;
+            this.status = status;
+        }
     }
 
     // Final, robust MiniZinc Parser (Handles underscores, dimensions, and auto-detects size)
@@ -263,6 +386,51 @@ public class SudokuBenchmark {
             }
             
             return new SudokuInstance(file.getName(), n, data);
+        }
+    }
+    
+    // ==========================================
+    // STATISTICAL UTILITIES
+    // ==========================================
+    
+    private static double computeMean(List<Double> values) {
+        return values.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+    }
+    
+    private static double computeStdDev(List<Double> values, double mean) {
+        if (values.size() <= 1) return 0.0;
+        double variance = values.stream()
+            .mapToDouble(v -> Math.pow(v - mean, 2))
+            .average()
+            .orElse(0.0);
+        return Math.sqrt(variance);
+    }
+    
+    private static void writeResultsToCSV(List<BenchmarkRecord> records) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(CSV_OUTPUT))) {
+            // Write header
+            writer.println("Instance,Size,Clues,Density,Strategy,MeanTime,StdDevTime,MeanNodes,MeanFails,MeanMemoryKB,Status");
+            
+            // Write data
+            for (BenchmarkRecord record : records) {
+                int N = record.instance.n * record.instance.n;
+                writer.printf("%s,%d,%d,%.4f,%s,%.6f,%.6f,%d,%d,%d,%s%n",
+                    record.instance.name,
+                    N,
+                    record.instance.countGivenClues(),
+                    record.instance.getDensity(),
+                    record.strategyName,
+                    record.meanTime,
+                    record.stdDevTime,
+                    record.meanNodes,
+                    record.meanFails,
+                    record.meanMemory,
+                    record.status);
+            }
+            
+            System.out.println("\nCSV export complete: " + CSV_OUTPUT);
+        } catch (IOException e) {
+            System.err.println("Error writing CSV: " + e.getMessage());
         }
     }
 }

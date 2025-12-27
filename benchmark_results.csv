@@ -1,0 +1,17 @@
+Instance,Size,Clues,Density,Strategy,MeanTime,StdDevTime,MeanNodes,MeanFails,MeanMemoryKB,Status
+sudoku_p0.dzn,9,23,0.2840,Default/InputOrder,0.002030,0.001706,1,0,515,SAT
+sudoku_p0.dzn,9,23,0.2840,Tuned/DomOverWDeg,0.000598,0.000210,1,0,97,SAT
+sudoku_p0.dzn,9,23,0.2840,FirstFail/MinDom,0.000415,0.000023,1,0,113,SAT
+sudoku_p0.dzn,9,23,0.2840,Human/RandomOrder,0.000434,0.000117,1,0,81,SAT
+sudoku_p1.dzn,9,30,0.3704,Default/InputOrder,0.000421,0.000193,1,0,81,SAT
+sudoku_p1.dzn,9,30,0.3704,Tuned/DomOverWDeg,0.000360,0.000035,1,0,81,SAT
+sudoku_p1.dzn,9,30,0.3704,FirstFail/MinDom,0.000347,0.000045,1,0,81,SAT
+sudoku_p1.dzn,9,30,0.3704,Human/RandomOrder,0.000306,0.000013,1,0,81,SAT
+sudoku_p36.dzn,16,102,0.3984,Default/InputOrder,0.001982,0.000142,1,0,81,SAT
+sudoku_p36.dzn,16,102,0.3984,Tuned/DomOverWDeg,0.001995,0.000114,1,0,81,SAT
+sudoku_p36.dzn,16,102,0.3984,FirstFail/MinDom,0.001958,0.000139,1,0,81,SAT
+sudoku_p36.dzn,16,102,0.3984,Human/RandomOrder,0.001676,0.000138,1,0,81,SAT
+sudoku_p89.dzn,25,284,0.4544,Default/InputOrder,60.000095,0.000029,535597,535584,240,TIMEOUT
+sudoku_p89.dzn,25,284,0.4544,Tuned/DomOverWDeg,1.208053,0.021447,7931,7878,1352,SAT
+sudoku_p89.dzn,25,284,0.4544,FirstFail/MinDom,23.891329,0.412835,192259,192242,353,SAT
+sudoku_p89.dzn,25,284,0.4544,Human/RandomOrder,60.000077,0.000031,587873,587860,263,TIMEOUT
