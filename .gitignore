@@ -2,7 +2,6 @@
 *.class
 
 # Ignore Java dependency directories (like those for IDEs)
-/lib/
 /vendor/
 
 # Explicitly ignore the problematic JDK directory (as identified in the error)

@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "SudokuSolver",
+      "request": "launch",
+      "mainClass": "src.SudokuSolver",
+      "projectName": "Sudoku_Choco_eb093f59"
+    },
+    {
+      "type": "java",
+      "name": "Launch SudokuSolver",
+      "request": "launch",
+      "mainClass": "SudokuSolver",
+      "cwd": "${workspaceFolder}",
+      "classPaths": [
+        "${workspaceFolder}",
+        "${workspaceFolder}/choco-solver.jar",
+        "${workspaceFolder}/lib/trove4j.jar",
+        "${workspaceFolder}/lib/sat4j-core.jar",
+        "${workspaceFolder}/lib/sat4j-pb.jar"
+      ]
+    }
+  ]
+}

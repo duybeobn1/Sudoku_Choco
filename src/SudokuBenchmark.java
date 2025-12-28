@@ -1,3 +1,4 @@
+package src;
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.search.limits.FailCounter;
@@ -31,7 +32,7 @@ public class SudokuBenchmark {
     private static final int BENCHMARK_RUNS = 5;
     
     // CSV output file
-    private static final String CSV_OUTPUT = "benchmark_results.csv";
+    private static final String CSV_OUTPUT = "../benchmarks/benchmark_results.csv";
 
     public static void main(String[] args) {
         System.out.println("=== SUDOKU SOLVER BENCHMARK (Choco Solver) ===");
