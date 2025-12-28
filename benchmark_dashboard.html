@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Benchmark Results</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #208080;
+            font-size: 28px;
+        }
+
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .kpi {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #208080;
+        }
+
+        .kpi-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #208080;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-box h3 {
+            margin-bottom: 15px;
+            color: #208080;
+            font-size: 16px;
+        }
+
+        canvas {
+            max-height: 300px;
+        }
+
+        .table-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .table-box h3 {
+            margin-bottom: 15px;
+            color: #208080;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: #208080;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-sat {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-timeout {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-complete {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-incomplete {
+            background: #fecaca;
+            color: #991b1b;
+        }
+
+        .easy { color: #22c55e; font-weight: 600; }
+        .medium { color: #f59e0b; font-weight: 600; }
+        .hard { color: #ef4444; font-weight: 600; }
+        .large { color: #8b5cf6; font-weight: 600; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Sudoku Solver Benchmark Results</h1>
+        
+        <div id="loading" class="loading">⏳ Loading benchmark_results.csv...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="content" style="display: none;">
+            <!-- KPIs -->
+            <div class="kpis">
+                <div class="kpi">
+                    <div class="kpi-label">Instances</div>
+                    <div class="kpi-value" id="kpi-instances">0</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Total Runs</div>
+                    <div class="kpi-value" id="kpi-runs">0</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Success Rate</div>
+                    <div class="kpi-value" id="kpi-success">0%</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Fastest</div>
+                    <div class="kpi-value" id="kpi-fastest">—</div>
+                </div>
+                <div class="kpi">
+                    <div class="kpi-label">Slowest</div>
+                    <div class="kpi-value" id="kpi-slowest">—</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts">
+                <div class="chart-box">
+                    <h3>⏱️ Time by Solver</h3>
+                    <canvas id="timeChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>✅ Success by Difficulty</h3>
+                    <canvas id="successChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>🎯 Complete vs Incomplete</h3>
+                    <canvas id="typeChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>📈 Iterations by Solver</h3>
+                    <canvas id="iterChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-box">
+                <h3>All Results</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Instance</th>
+                            <th>Difficulty</th>
+                            <th>Solver</th>
+                            <th>Type</th>
+                            <th>Time (ms)</th>
+                            <th>Iterations</th>
+                            <th>Backtracks</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = [];
+
+        // Auto-load CSV
+        fetch('./benchmarks/benchmark_results.csv')
+            .then(r => r.text())
+            .then(text => parseCSV(text))
+            .catch(err => showError(err.message));
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            data = lines.slice(1).map(line => {
+                const values = line.split(',').map(v => v.trim());
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = values[i]);
+                return obj;
+            });
+
+            if (data.length === 0) {
+                showError('No data found in CSV');
+                return;
+            }
+
+            render();
+        }
+
+        function render() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            updateKPIs();
+            createCharts();
+            populateTable();
+        }
+
+        function updateKPIs() {
+            const instances = new Set(data.map(r => r.Instance)).size;
+            const successCount = data.filter(r => r.Status === 'SAT').length;
+            const successRate = Math.round((successCount / data.length) * 100);
+            const fastest = data.reduce((a, b) => 
+                parseFloat(a.MeanTimeMs) < parseFloat(b.MeanTimeMs) ? a : b
+            );
+            const slowest = data.reduce((a, b) => 
+                parseFloat(a.MeanTimeMs) > parseFloat(b.MeanTimeMs) ? a : b
+            );
+
+            document.getElementById('kpi-instances').textContent = instances;
+            document.getElementById('kpi-runs').textContent = data.length;
+            document.getElementById('kpi-success').textContent = successRate + '%';
+            document.getElementById('kpi-fastest').textContent = fastest.Solver.replace('_', ' ').slice(0, 15);
+            document.getElementById('kpi-slowest').textContent = slowest.Solver.replace('_', ' ').slice(0, 15);
+        }
+
+        function createCharts() {
+            // Group by solver
+            const solvers = {};
+            data.forEach(r => {
+                if (!solvers[r.Solver]) solvers[r.Solver] = [];
+                solvers[r.Solver].push(parseFloat(r.MeanTimeMs));
+            });
+
+            // Chart 1: Time by Solver
+            const solverLabels = Object.keys(solvers).map(s => s.replace(/_/g, '\n').slice(0, 20));
+            const solverTimes = Object.values(solvers).map(times => 
+                (times.reduce((a,b) => a+b) / times.length).toFixed(2)
+            );
+
+            new Chart(document.getElementById('timeChart'), {
+                type: 'bar',
+                data: {
+                    labels: solverLabels,
+                    datasets: [{
+                        label: 'Avg Time (ms)',
+                        data: solverTimes,
+                        backgroundColor: '#208080'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Chart 2: Success by Difficulty
+            const difficulties = {};
+            data.forEach(r => {
+                if (!difficulties[r.Difficulty]) difficulties[r.Difficulty] = { total: 0, success: 0 };
+                difficulties[r.Difficulty].total++;
+                if (r.Status === 'SAT') difficulties[r.Difficulty].success++;
+            });
+
+            const diffLabels = Object.keys(difficulties);
+            const diffSuccess = diffLabels.map(d => 
+                Math.round((difficulties[d].success / difficulties[d].total) * 100)
+            );
+
+            new Chart(document.getElementById('successChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: diffLabels,
+                    datasets: [{
+                        data: diffSuccess,
+                        backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
+                    }]
+                },
+                options: { responsive: true }
+            });
+
+            // Chart 3: Complete vs Incomplete
+            const types = {};
+            data.forEach(r => {
+                if (!types[r.SolverType]) types[r.SolverType] = [];
+                types[r.SolverType].push(parseFloat(r.MeanTimeMs));
+            });
+
+            const typeLabels = Object.keys(types);
+            const typeTimes = typeLabels.map(t => 
+                (types[t].reduce((a,b) => a+b) / types[t].length).toFixed(2)
+            );
+
+            new Chart(document.getElementById('typeChart'), {
+                type: 'bar',
+                data: {
+                    labels: typeLabels,
+                    datasets: [{
+                        label: 'Avg Time (ms)',
+                        data: typeTimes,
+                        backgroundColor: ['#3b82f6', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Chart 4: Iterations by Solver
+            const solverIter = {};
+            data.forEach(r => {
+                if (!solverIter[r.Solver]) solverIter[r.Solver] = [];
+                solverIter[r.Solver].push(parseFloat(r.MeanIterations));
+            });
+
+            const iterLabels = Object.keys(solverIter).map(s => s.replace(/_/g, '\n').slice(0, 20));
+            const iterData = Object.values(solverIter).map(iters => 
+                (iters.reduce((a,b) => a+b) / iters.length).toFixed(0)
+            );
+
+            new Chart(document.getElementById('iterChart'), {
+                type: 'bar',
+                data: {
+                    labels: iterLabels,
+                    datasets: [{
+                        label: 'Avg Iterations',
+                        data: iterData,
+                        backgroundColor: '#5e5240'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        function populateTable() {
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = '';
+
+            data.forEach(r => {
+                const row = document.createElement('tr');
+                const diffClass = `${r.Difficulty.toLowerCase()}`;
+                const typeClass = r.SolverType === 'Complete' ? 'badge-complete' : 'badge-incomplete';
+                const statusClass = r.Status === 'SAT' ? 'badge-sat' : 'badge-timeout';
+
+                row.innerHTML = `
+                    <td>${r.Instance}</td>
+                    <td><span class="${diffClass}">${r.Difficulty}</span></td>
+                    <td>${r.Solver.replace(/_/g, ' ')}</td>
+                    <td><span class="badge ${typeClass}">${r.SolverType}</span></td>
+                    <td>${parseFloat(r.MeanTimeMs).toFixed(2)}</td>
+                    <td>${Math.round(r.MeanIterations)}</td>
+                    <td>${Math.round(r.MeanBacktracks)}</td>
+                    <td><span class="badge ${statusClass}">${r.Status}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function showError(msg) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent = '❌ Error: ' + msg;
+        }
+    </script>
+</body>
+</html>

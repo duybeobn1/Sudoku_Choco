@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "Main",
+      "request": "launch",
+      "mainClass": "src.Main",
+      "projectName": "Sudoku_Choco_eb093f59"
+    },
+    {
+      "type": "java",
       "name": "SudokuSolver",
       "request": "launch",
       "mainClass": "src.SudokuSolver",

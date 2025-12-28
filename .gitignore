@@ -6,3 +6,5 @@
 
 # Explicitly ignore the problematic JDK directory (as identified in the error)
 oracleJdk-25.jdk/
+
+bin/
