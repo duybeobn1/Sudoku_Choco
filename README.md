@@ -27,13 +27,16 @@ A modular and well-structured architecture to solve Sudoku puzzles using:
 
 ✅ **Complete Solver**: Constraint Programming (Choco Solver)  
 - Guarantees a solution if one exists  
-- Advanced search algorithms  
-- Multiple strategies available  
+- Advanced search strategies (DOM_OVER_WDEG, MIN_DOM_SIZE, ACTIVITY_BASED)
+- Optimal for difficult puzzles
+- External dependency: Choco Solver library
 
 ✅ **Incomplete Solver**: Backtracking + Heuristics  
-- Pure Java, no external dependency required  
-- Efficient search algorithms  
-- Customizable heuristics (MRV, Degree)  
+- Pure Java, no external dependency  
+- Three customizable heuristics: MRV, Degree, Hybrid (MRV + Degree)
+- Constraint propagation for search space reduction
+- Very efficient on easy/medium puzzles
+- Fast iteration and backtracking tracking
 
 ---
 
@@ -54,6 +57,7 @@ src/
 │   ├── CellHeuristic.java       # Heuristic interface
 │   ├── MRVHeuristic.java        # Minimum Remaining Values
 │   ├── DegreeHeuristic.java     # Degree-based heuristic
+│   └── HybridHeuristic.java     # MRV + Degree hybrid
 │
 ├── util/
 │   ├── SudokuValidator.java     # Grid validation
@@ -120,48 +124,109 @@ SudokuGrid grid = PuzzleParser.createFromArray(data, 3);
 
 ## 🎯 Complete Solver Strategies
 
-| Strategy         | Description                                   |
-|-----------------|-----------------------------------------------|
-| `INPUT_ORDER`    | Naive variable order (baseline)              |
-| `DOM_OVER_WDEG`  | Domain over weighted degree (recommended)    |
-| `MIN_DOM_SIZE`   | First-fail: smallest domain first            |
-| `ACTIVITY_BASED` | Activity-based search                        |
+| Strategy | Description | When to Use |
+|----------|-------------|------------|
+| `INPUT_ORDER` | Sequential variable ordering (baseline) | Comparisons, naive baseline |
+| `DOM_OVER_WDEG` | Domain over weighted degree (recommended) | Most puzzles - excellent balance |
+| `MIN_DOM_SIZE` | First-fail: smallest domain first | Easy to medium puzzles |
+
+```java
+CompleteSolver solver = new CompleteSolver(grid);
+solver.setStrategy(CompleteSolver.SearchStrategy.DOM_OVER_WDEG);
+solver.setTimeout(30);  // seconds
+```
 
 ---
 
 ## 🧠 Incomplete Solver Heuristics
 
-### MRVHeuristic (Minimum Remaining Values)
+### 1️⃣ MRVHeuristic (Minimum Remaining Values)
+- **Strategy**: Select cell with fewest candidate values
+- **Effectiveness**: Very high - aggressively reduces branching
+- **Speed**: Fast computation, minimal overhead
+- **Best for**: Most Sudoku instances (easy/medium/hard)
 
-- Selects the cell with the fewest candidates  
-- Very effective to reduce search space  
-- Good balance between time and memory  
+```java
+IncompleteSolver solver = new IncompleteSolver(grid);
+solver.setHeuristic(new MRVHeuristic());
+```
 
-### DegreeHeuristic
+### 2️⃣ DegreeHeuristic (MRV + Degree Tie-breaking)
+- **Strategy**: Primary = fewest candidates (MRV); Tie-breaker = constrains most neighbors
+- **Effectiveness**: Very high on hard puzzles
+- **Speed**: Slightly slower due to degree computation
+- **Best for**: Hard/sparse puzzles with multiple candidate ties
 
-- First uses number of candidates (MRV)  
-- On ties, selects the cell that constrains the most neighbors  
-- More sophisticated but slightly slower  
+```java
+IncompleteSolver solver = new IncompleteSolver(grid);
+solver.setHeuristic(new DegreeHeuristic());
+```
 
-### Propagation
+### 3️⃣ HybridHeuristic
+- **Strategy**: MRV + Degree optimization (same as Degree, but optimized)
+- **Effectiveness**: Best overall balance
+- **Speed**: Faster than pure Degree, smarter than pure MRV
+- **Best for**: Production use - works great on all difficulty levels
 
-- Automatically removes impossible candidates  
-- Strongly reduces the search space  
-- Recommended: enabled by default  
+```java
+IncompleteSolver solver = new IncompleteSolver(grid);
+solver.setHeuristic(new HybridHeuristic());
+```
+
+### ⚙️ Configuration Options
+
+```java
+IncompleteSolver solver = new IncompleteSolver(grid);
+solver.setHeuristic(new HybridHeuristic());      // Choose heuristic
+solver.setPropagate(true);                       // Enable candidate reduction
+solver.setMaxIterations(100_000);                // Iteration limit
+```
 
 ---
 
-## 📊 SolverResult Class
+## 📊 Benchmark & Dashboard Tools
 
-Each solving call returns a `SolverResult` containing:
+### 1️⃣ **Benchmark Suite** (`SudokuBenchmark.java`)
+Runs comprehensive tests across:
+- **Difficulties**: Easy, Medium, Hard, Large (16×16)
+- **Complete Solver**: 3 strategies × N puzzles
+- **Incomplete Solver**: 3 heuristics × N puzzles
+- **Output**: CSV report with timing, iterations, backtracks, success rates
 
-```java
-result.isSolved()      // boolean: puzzle solved?
-result.getTimeMs()     // long: time in milliseconds
-result.getIterations() // long: number of iterations
-result.getBacktracks() // long: number of backtracks
-result.getSolution()   // int[][]: solution grid (if solved)
-result.getSolverName() // String: solver name
+```bash
+java -cp "bin;lib/*" src.Main benchmark
+# Generates: benchmarks/benchmark_results.csv
+```
+
+### 2️⃣ **Benchmark Dashboard** (`benchmark_dashboard.html`)
+Interactive web UI to visualize results:
+- 📈 Charts: Time by solver, Success rates, Iterations, Complete vs Incomplete
+- 📋 Detailed results table
+- 🎯 KPIs: Success rate, fastest solver, slowest solver
+- ✨ No server required (loads CSV via client-side JS)
+
+**Usage:**
+```bash
+# Method 1: With Python HTTP server (recommended)
+cd /path/to/project
+python -m http.server 8000
+
+# Then open: http://localhost:8000/benchmark_dashboard.html
+```
+
+### 3️⃣ **Interactive Solver** (`sudoku_solver.html`)
+Visual Sudoku solving interface:
+- 🎮 Load puzzles from benchmarks or create custom grids (9×9 or 16×16)
+- ⚙️ Choose solver (Complete or Incomplete with any heuristic)
+- 🔍 Watch real-time solving with statistics
+- 📊 Performance metrics (time, iterations, backtracks)
+
+**Usage:**
+```bash
+# Open directly in browser or via HTTP server
+open sudoku_solver.html
+# or
+http://localhost:8000/sudoku_solver.html
 ```
 
 ---
