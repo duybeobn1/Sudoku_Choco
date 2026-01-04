@@ -162,17 +162,6 @@ IncompleteSolver solver = new IncompleteSolver(grid);
 solver.setHeuristic(new DegreeHeuristic());
 ```
 
-### 3️⃣ HybridHeuristic
-- **Strategy**: MRV + Degree optimization (same as Degree, but optimized)
-- **Effectiveness**: Best overall balance
-- **Speed**: Faster than pure Degree, smarter than pure MRV
-- **Best for**: Production use - works great on all difficulty levels
-
-```java
-IncompleteSolver solver = new IncompleteSolver(grid);
-solver.setHeuristic(new HybridHeuristic());
-```
-
 ### ⚙️ Configuration Options
 
 ```java
@@ -188,9 +177,9 @@ solver.setMaxIterations(100_000);                // Iteration limit
 
 ### 1️⃣ **Benchmark Suite** (`SudokuBenchmark.java`)
 Runs comprehensive tests across:
-- **Difficulties**: Easy, Medium, Hard, Large (16×16)
+- **Difficulties**: Easy, Medium, Hard
 - **Complete Solver**: 3 strategies × N puzzles
-- **Incomplete Solver**: 3 heuristics × N puzzles
+- **Incomplete Solver**: 2 heuristics × N puzzles
 - **Output**: CSV report with timing, iterations, backtracks, success rates
 
 ```bash
@@ -207,8 +196,7 @@ Interactive web UI to visualize results:
 
 **Usage:**
 ```bash
-# Method 1: With Python HTTP server (recommended)
-cd /path/to/project
+# Go to the root of the projetct
 python -m http.server 8000
 
 # Then open: http://localhost:8000/benchmark_dashboard.html
@@ -229,49 +217,20 @@ open sudoku_solver.html
 http://localhost:8000/sudoku_solver.html
 ```
 
----
+## 🔬 Performance Analysis & Conclusion
 
-## 🔍 SudokuGrid Class
+Our benchmarks on "Hard" instances (e.g., `sudoku_p89.dzn`) reveal distinct performance characteristics for each approach:
 
-Full grid management:
+1.  **Complete Solver (Choco)**:
+    *   **Strategy Matters**: `INPUT_ORDER` fails quickly on hard instances, while `DOM_OVER_WDEG` solves them efficiently (e.g., ~4.9s for a hard puzzle).
+    *   **Robustness**: The underlying Constraint Programming engine handles deep search trees well through advanced propagation and conflict learning.
 
-```java
-// Value access
-int value = grid.get(row, col);
-grid.set(row, col, 5);
-boolean empty = grid.isEmpty(row, col);
+2.  **Incomplete Solver (Backtracking)**:
+    *   **High Throughput**: Capable of processing over 1 million iterations in under 6 seconds.
+    *   **Heuristic Limitations**: While `MRV` and `Degree` heuristics are vastly superior to naive backtracking, they may still get trapped in deep search sub-trees on specifically designed "Hard" instances, leading to timeouts despite high iteration speed.
+    *   **Use Case**: Extremely efficient for Easy to Medium puzzles, but requires advanced techniques (like restarts or clause learning) to match Choco on the hardest instances.
 
-// Candidates (for incomplete solver)
-int candidates = grid.getCandidates(row, col);
-grid.removeCandidate(row, col, 5);
-int count = grid.countCandidates(row, col);
-
-// General info
-int N = grid.getSize();         // 9 for a 9x9
-int n = grid.getBlockSize();    // 3 for a 9x9
-boolean full = grid.isFull();
-int clues = grid.countClues();
-grid.print();                   // Print grid to console
-```
-
----
-
-## 💾 SudokuValidator Class
-
-Advanced validation:
-
-```java
-// Full grid validation
-boolean valid = SudokuValidator.isValid(grid);
-
-// Check a placement before applying it
-boolean canPlace = SudokuValidator.isValidPlacement(grid, row, col, value);
-
-// Partial checks
-boolean rowValid   = SudokuValidator.isRowValid(grid, row);
-boolean colValid   = SudokuValidator.isColumnValid(grid, col);
-boolean blockValid = SudokuValidator.isBlockValid(grid, blockRow, blockCol);
-```
+**Conclusion**: For general-purpose solving, the Incomplete Solver is lightweight and fast. For guaranteed solving of complex, adversarial puzzles, the Complete Solver with `DOM_OVER_WDEG` remains the superior choice.
 
 ---
 
