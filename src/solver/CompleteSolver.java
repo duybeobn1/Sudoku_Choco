@@ -14,7 +14,8 @@ import src.model.SolverResult;
  * Uses advanced search strategies for efficiency.
  */
 public class CompleteSolver extends SudokuSolver {
-    private int timeoutSeconds = 60;  // Default timeout
+
+    private int timeoutSeconds = 60; // Default timeout
     private SearchStrategy strategy = SearchStrategy.DOM_OVER_WDEG;
 
     public enum SearchStrategy {
@@ -57,7 +58,6 @@ public class CompleteSolver extends SudokuSolver {
     @Override
     public SolverResult solve() {
         startTime = System.currentTimeMillis();
-
         try {
             int N = grid.getSize();
             int n = grid.getBlockSize();
@@ -102,7 +102,6 @@ public class CompleteSolver extends SudokuSolver {
             // 5. Configure solver
             Solver solver = model.getSolver();
             IntVar[] allVars = flattenMatrix(chocoGrid);
-
             switch (strategy) {
                 case DOM_OVER_WDEG:
                     solver.setSearch(Search.domOverWDegSearch(allVars));
@@ -118,13 +117,12 @@ public class CompleteSolver extends SudokuSolver {
                     solver.setSearch(Search.inputOrderLBSearch(allVars));
                     break;
             }
-
             solver.limitTime(timeoutSeconds + "s");
 
             // 6. Solve
             boolean solutionFound = solver.solve();
             long nodes = solver.getMeasures().getNodeCount();
-            long backtracks = solver.getMeasures().getBackTrackCount();
+            long backtrackCount = solver.getMeasures().getBackTrackCount();
 
             if (solutionFound && solver.isFeasible() == ESat.TRUE) {
                 // Copy solution back to grid
@@ -133,12 +131,12 @@ public class CompleteSolver extends SudokuSolver {
                         grid.set(i, j, chocoGrid[i][j].getValue());
                     }
                 }
-                result.setIterations(nodes);
-                result.setBacktracks(backtracks);
+                this.iterations = nodes;
+                this.backtracks = backtrackCount;
                 finalizeResult(true);
             } else {
-                result.setIterations(nodes);
-                result.setBacktracks(backtracks);
+                this.iterations = nodes;
+                this.backtracks = backtrackCount;
                 finalizeResult(false);
             }
 
@@ -147,7 +145,6 @@ public class CompleteSolver extends SudokuSolver {
             e.printStackTrace();
             finalizeResult(false);
         }
-
         return result;
     }
 
