@@ -178,6 +178,7 @@ solver.setMaxIterations(100_000);                // Iteration limit
 ### 1️⃣ **Benchmark Suite** (`SudokuBenchmark.java`)
 Runs comprehensive tests across:
 - **Difficulties**: Easy, Medium, Hard
+- **Grid Sizes**: 9×9, 16×16, 25×25, and other n×n variants
 - **Complete Solver**: 3 strategies × N puzzles
 - **Incomplete Solver**: 2 heuristics × N puzzles
 - **Output**: CSV report with timing, iterations, backtracks, success rates
@@ -186,6 +187,24 @@ Runs comprehensive tests across:
 java -cp "bin;lib/*" src.Main benchmark
 # Generates: benchmarks/benchmark_results.csv
 ```
+
+**Puzzle Sources:**
+
+#### Instance Generation
+We generated custom Sudoku instances programmatically to ensure controlled difficulty levels and comprehensive solver evaluation:
+- **Generation Method**: Instances were created using constraint-based generation algorithms (Z3 SMT solver) that start with a complete valid solution and selectively remove clues while maintaining puzzle uniqueness.
+- **Grid Flexibility**: Supports n×n grids where n = k² (e.g., 9×9 with 3×3 blocks, 16×16 with 4×4 blocks, 25×25 with 5×5 blocks)
+- **Difficulty Control**: Difficulty is determined by the number and placement of removed clues—fewer clues = harder puzzles. We generated instances across a spectrum:
+  - **Easy**: ~60% clue density
+  - **Medium**: ~40% clue density
+  - **Hard**: ~20% clue density
+- **Validation**: All generated instances are verified to have exactly one unique solution before benchmarking.
+
+#### Online Benchmark Sources
+Additional instances were sourced from established online repositories to validate performance against known difficult puzzles:
+- Popular Sudoku benchmark datasets (e.g., Project Euler, Kaggle)
+- Real-world hard instances with known solving times
+- Cross-validation of solver performance against published results
 
 ### 2️⃣ **Benchmark Dashboard** (`benchmark_dashboard.html`)
 Interactive web UI to visualize results:
@@ -204,7 +223,7 @@ python -m http.server 8000
 
 ### 3️⃣ **Interactive Solver** (`sudoku_solver.html`)
 Visual Sudoku solving interface:
-- 🎮 Load puzzles from benchmarks or create custom grids (9×9 or 16×16)
+- 🎮 Load puzzles from benchmarks or create custom grids (9×9, 16×16, 25×25, or other n×n sizes)
 - ⚙️ Choose solver (Complete or Incomplete with any heuristic)
 - 🔍 Watch real-time solving with statistics
 - 📊 Performance metrics (time, iterations, backtracks)
@@ -386,4 +405,4 @@ public class CustomSolver extends SudokuSolver {
 - **Design Patterns**: Strategy (heuristics), Template Method (solver base)  
 - **Classical algorithms**: Backtracking, CSP, Constraint Propagation  
 - **Optimizations**: MRV, degree heuristic, early conflict detection  
-- **Scalability**: Supports 9x9, 16x16, and other \(n^2 \times n^2\) sizes  
+- **Scalability**: Supports 9x9, 16x16, and other \(n^2 \times n^2\) sizes
