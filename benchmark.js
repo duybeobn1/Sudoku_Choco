@@ -24,12 +24,33 @@ class BenchmarkDashboard {
         const lines = text.trim().split('\n');
         const headers = lines[0].split(',').map(h => h.trim());
 
-        this.data = lines.slice(1).map(line => {
-            const values = line.split(',').map(v => v.trim());
-            const obj = {};
-            headers.forEach((h, i) => obj[h] = values[i]);
-            return obj;
-        });
+        // Robust CSV parsing: the Solver field itself may contain commas.
+        // We know the header layout is:
+        // Instance,Difficulty,SolverType,Size,Solver,MeanTimeMs,StdDevMs,MeanIterations,MeanBacktracks,SuccessRate,Status
+        // So if a data line has more than headers.length columns, we join
+        // the "middle" part back into the Solver string.
+        this.data = lines.slice(1)
+            .filter(line => line.trim().length > 0)
+            .map(line => {
+                const raw = line.split(',').map(v => v.trim());
+
+                let values;
+                if (raw.length > headers.length) {
+                    const head = raw.slice(0, 4); // first 4 fixed columns
+                    const tail = raw.slice(-6);   // last 6 metric/status columns
+                    const solverParts = raw.slice(4, raw.length - 6);
+                    const solver = solverParts.join(',');
+                    values = [...head, solver, ...tail];
+                } else {
+                    values = raw;
+                }
+
+                const obj = {};
+                headers.forEach((h, i) => {
+                    obj[h] = values[i];
+                });
+                return obj;
+            });
 
         if (this.data.length === 0) {
             this.showError('No data found in CSV');
@@ -52,18 +73,39 @@ class BenchmarkDashboard {
         const instances = new Set(this.data.map(r => r.Instance)).size;
         const successCount = this.data.filter(r => r.Status === 'SAT').length;
         const successRate = Math.round((successCount / this.data.length) * 100);
-        const fastest = this.data.reduce((a, b) =>
-            parseFloat(a.MeanTimeMs) < parseFloat(b.MeanTimeMs) ? a : b
-        );
-        const slowest = this.data.reduce((a, b) =>
-            parseFloat(a.MeanTimeMs) > parseFloat(b.MeanTimeMs) ? a : b
-        );
+
+        // Focus on best/worst COMPLETE configurations (for choosing a "best" CP config)
+        const completeSat = this.data.filter(r => r.SolverType === 'Complete' && r.Status === 'SAT');
+        let fastestComplete = null;
+        let slowestComplete = null;
+        if (completeSat.length > 0) {
+            fastestComplete = completeSat.reduce((a, b) =>
+                parseFloat(a.MeanTimeMs) < parseFloat(b.MeanTimeMs) ? a : b
+            );
+            slowestComplete = completeSat.reduce((a, b) =>
+                parseFloat(a.MeanTimeMs) > parseFloat(b.MeanTimeMs) ? a : b
+            );
+        }
+
+        const truncate = (s, maxLen = 28) => {
+            if (!s) return '—';
+            return s.length > maxLen ? s.slice(0, maxLen - 1) + '…' : s;
+        };
+
+        const fastestLabel = fastestComplete ? fastestComplete.Solver : '—';
+        const slowestLabel = slowestComplete ? slowestComplete.Solver : '—';
 
         document.getElementById('kpi-instances').textContent = instances;
         document.getElementById('kpi-runs').textContent = this.data.length;
         document.getElementById('kpi-success').textContent = successRate + '%';
-        document.getElementById('kpi-fastest').textContent = fastest.Solver.replace('_', ' ').slice(0, 15);
-        document.getElementById('kpi-slowest').textContent = slowest.Solver.replace('_', ' ').slice(0, 15);
+
+        const fastestEl = document.getElementById('kpi-fastest');
+        fastestEl.textContent = truncate(fastestLabel);
+        fastestEl.title = fastestLabel;
+
+        const slowestEl = document.getElementById('kpi-slowest');
+        slowestEl.textContent = truncate(slowestLabel);
+        slowestEl.title = slowestLabel;
     }
 
     createCharts() {
@@ -201,10 +243,16 @@ class BenchmarkDashboard {
             const typeClass = r.SolverType === 'Complete' ? 'badge-complete' : 'badge-incomplete';
             const statusClass = r.Status === 'SAT' ? 'badge-sat' : 'badge-timeout';
 
+            const details = this.parseSolverDetails(r);
+
             row.innerHTML = `
                 <td>${r.Instance}</td>
                 <td><span class="${diffClass}">${r.Difficulty}</span></td>
-                <td>${r.Solver.replace(/_/g, ' ')}</td>
+                <td>${details.strategy}</td>
+                <td>${details.val}</td>
+                <td>${details.cons}</td>
+                <td>${details.restart}</td>
+                <td>${details.order}</td>
                 <td><span class="badge ${typeClass}">${r.SolverType}</span></td>
                 <td>${parseFloat(r.MeanTimeMs).toFixed(2)}</td>
                 <td>${Math.round(r.MeanIterations)}</td>
@@ -213,6 +261,39 @@ class BenchmarkDashboard {
             `;
             tbody.appendChild(row);
         });
+    }
+
+    // Parse solver configuration string like
+    // "Complete[DOM OVER WDEG,Val=MAX,Cons=AC,Luby(...),DeterministicOrder]"
+    // into separate fields for the table.
+    parseSolverDetails(r) {
+        const def = { strategy: r.Solver || '—', val: '—', cons: '—', restart: '—', order: '—' };
+        if (r.SolverType !== 'Complete' || !r.Solver) return def;
+
+        let s = r.Solver;
+        const lb = s.indexOf('[');
+        const rb = s.lastIndexOf(']');
+        if (lb === -1 || rb === -1 || rb <= lb + 1) return def;
+
+        let inner = s.slice(lb + 1, rb).trim();
+        // Normalize separators so we can split reliably
+        inner = inner.replace(/\s*\|\s*/g, ',');
+        const parts = inner.split(',').map(p => p.trim()).filter(Boolean);
+        if (parts.length === 0) return def;
+
+        const out = { strategy: parts[0], val: '—', cons: '—', restart: '—', order: '—' };
+        parts.slice(1).forEach(p => {
+            if (p.startsWith('Val=')) {
+                out.val = p.substring(4);
+            } else if (p.startsWith('Cons=')) {
+                out.cons = p.substring(5);
+            } else if (p.startsWith('Luby(') || p.startsWith('Geom(')) {
+                out.restart = p;
+            } else if (p.length > 0) {
+                out.order = p;
+            }
+        });
+        return out;
     }
 
     showError(msg) {
