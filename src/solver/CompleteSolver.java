@@ -2,11 +2,18 @@ package src.solver;
 
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solver;
+import org.chocosolver.solver.search.limits.FailCounter;
 import org.chocosolver.solver.search.strategy.Search;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.util.ESat;
 import src.model.SudokuGrid;
 import src.model.SolverResult;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
 /**
  * Complete Solver using Choco Constraint Programming library.
@@ -18,11 +25,19 @@ public class CompleteSolver extends SudokuSolver {
     private int timeoutSeconds = 60; // Default timeout
     private SearchStrategy strategy = SearchStrategy.DOM_OVER_WDEG;
 
+    // Additional tunable parameters for benchmarking / experimentation
+    private boolean useRestarts = false;
+    private int lubyBase = 0;
+    private int lubyUnit = 1;
+    private int lubyFactor = 2;
+    private boolean randomizeOrder = false;
+    private long randomSeed = 0L;
+
     public enum SearchStrategy {
         INPUT_ORDER,
         DOM_OVER_WDEG,
         MIN_DOM_SIZE,
-        ACTIVITY_BASED
+        RANDOM
     }
 
     /**
@@ -50,6 +65,25 @@ public class CompleteSolver extends SudokuSolver {
      */
     public void setStrategy(SearchStrategy strategy) {
         this.strategy = strategy;
+    }
+
+    /**
+     * Enable/disable Luby restart policy and set its parameters.
+     */
+    public void configureRestarts(boolean useRestarts, int lubyBase, int lubyUnit, int lubyFactor) {
+        this.useRestarts = useRestarts;
+        this.lubyBase = lubyBase;
+        this.lubyUnit = lubyUnit;
+        this.lubyFactor = lubyFactor;
+    }
+
+    /**
+     * Configure randomization of the variable ordering.
+     * If randomizeOrder is true and seed != 0, the seed is used for reproducibility.
+     */
+    public void configureRandomization(boolean randomizeOrder, long seed) {
+        this.randomizeOrder = randomizeOrder;
+        this.randomSeed = seed;
     }
 
     /**
@@ -102,21 +136,39 @@ public class CompleteSolver extends SudokuSolver {
             // 5. Configure solver
             Solver solver = model.getSolver();
             IntVar[] allVars = flattenMatrix(chocoGrid);
+
+            // Optionally randomize variable order
+            IntVar[] orderedVars = allVars;
+            if (randomizeOrder) {
+                List<IntVar> vars = new ArrayList<>(Arrays.asList(allVars));
+                Random rnd = (randomSeed == 0L) ? new Random(System.nanoTime()) : new Random(randomSeed);
+                Collections.shuffle(vars, rnd);
+                orderedVars = vars.toArray(new IntVar[0]);
+            }
+
+            // Configure search strategy
             switch (strategy) {
                 case DOM_OVER_WDEG:
-                    solver.setSearch(Search.domOverWDegSearch(allVars));
+                    solver.setSearch(Search.domOverWDegSearch(orderedVars));
                     break;
                 case MIN_DOM_SIZE:
-                    solver.setSearch(Search.minDomLBSearch(allVars));
+                    solver.setSearch(Search.minDomLBSearch(orderedVars));
                     break;
-                case ACTIVITY_BASED:
-                    solver.setSearch(Search.activityBasedSearch(allVars));
+                case RANDOM:
+                    // RANDOM here means: rely on randomized variable order + simple LB search
+                    solver.setSearch(Search.inputOrderLBSearch(orderedVars));
                     break;
                 case INPUT_ORDER:
                 default:
-                    solver.setSearch(Search.inputOrderLBSearch(allVars));
+                    solver.setSearch(Search.inputOrderLBSearch(orderedVars));
                     break;
             }
+
+            // Optionally configure restart policy
+            if (useRestarts && lubyBase > 0) {
+                solver.setLubyRestart(lubyBase, new FailCounter(model, lubyUnit), lubyFactor);
+            }
+
             solver.limitTime(timeoutSeconds + "s");
 
             // 6. Solve

@@ -39,8 +39,138 @@ public class SudokuBenchmark {
 
     // Benchmark configuration
     private static final int BENCHMARK_RUNS = 3;                // Runs per configuration
-    private static final long ITERATION_LIMIT = 1_000_000;    // Max iterations for incomplete solver
+    private static final long ITERATION_LIMIT = 1_000_000;      // Max iterations for incomplete solver
     private static final int TIMEOUT_SECONDS = 60;              // Timeout for each solver (1 min)
+
+    /**
+     * Parameterized configuration for a single CompleteSolver run.
+     */
+    private static class CompleteConfig {
+        String name;                 // Label for output / CSV
+        SearchStrategy strategy;     // High-level search strategy
+        boolean useRestarts;         // Enable Luby restarts
+        int lubyBase;                // Luby base
+        int lubyUnit;                // FailCounter unit
+        int lubyFactor;              // Luby growth factor
+        boolean randomizeOrder;      // Shuffle variable order
+        long randomSeed;             // Seed for reproducibility (0 = system nanoTime)
+
+        CompleteConfig(String name,
+                       SearchStrategy strategy,
+                       boolean useRestarts,
+                       int lubyBase,
+                       int lubyUnit,
+                       int lubyFactor,
+                       boolean randomizeOrder,
+                       long randomSeed) {
+            this.name = name;
+            this.strategy = strategy;
+            this.useRestarts = useRestarts;
+            this.lubyBase = lubyBase;
+            this.lubyUnit = lubyUnit;
+            this.lubyFactor = lubyFactor;
+            this.randomizeOrder = randomizeOrder;
+            this.randomSeed = randomSeed;
+        }
+    }
+
+    /**
+     * Set of CompleteSolver configurations to benchmark.
+     *
+     * We explore several combinations of:
+     *  - strategy (INPUT_ORDER, DOM_OVER_WDEG, MIN_DOM_SIZE, RANDOM)
+     *  - Luby restart base values
+     *  - randomized variable orders with different seeds
+     */
+    private static final List<CompleteConfig> COMPLETE_CONFIGS = Arrays.asList(
+        // Baseline: input order, no restarts
+        new CompleteConfig(
+            "Complete_InputOrder_NoRestart",
+            SearchStrategy.INPUT_ORDER,
+            false, 0, 1, 2,
+            false, 0L
+        ),
+
+        // INPUT_ORDER + Luby restarts with different bases
+        new CompleteConfig(
+            "Complete_InputOrder_Luby100",
+            SearchStrategy.INPUT_ORDER,
+            true, 100, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_InputOrder_Luby500",
+            SearchStrategy.INPUT_ORDER,
+            true, 500, 1, 2,
+            false, 0L
+        ),
+
+        // DomOverWDeg with multiple Luby bases
+        new CompleteConfig(
+            "Complete_DomOverWDeg_NoRestart",
+            SearchStrategy.DOM_OVER_WDEG,
+            false, 0, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_DomOverWDeg_Luby100",
+            SearchStrategy.DOM_OVER_WDEG,
+            true, 100, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_DomOverWDeg_Luby500",
+            SearchStrategy.DOM_OVER_WDEG,
+            true, 500, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_DomOverWDeg_Luby1000",
+            SearchStrategy.DOM_OVER_WDEG,
+            true, 1000, 1, 2,
+            false, 0L
+        ),
+
+        // MinDom with and without restarts
+        new CompleteConfig(
+            "Complete_MinDom_NoRestart",
+            SearchStrategy.MIN_DOM_SIZE,
+            false, 0, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_MinDom_Luby200",
+            SearchStrategy.MIN_DOM_SIZE,
+            true, 200, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_MinDom_Luby800",
+            SearchStrategy.MIN_DOM_SIZE,
+            true, 800, 1, 2,
+            false, 0L
+        ),
+
+        // Randomized variable order with different seeds (no restarts)
+        new CompleteConfig(
+            "Complete_RandomOrder_Seed1",
+            SearchStrategy.RANDOM,
+            false, 0, 1, 2,
+            true, 1L
+        ),
+        new CompleteConfig(
+            "Complete_RandomOrder_Seed2",
+            SearchStrategy.RANDOM,
+            false, 0, 1, 2,
+            true, 2L
+        ),
+        new CompleteConfig(
+            "Complete_RandomOrder_Seed3",
+            SearchStrategy.RANDOM,
+            false, 0, 1, 2,
+            true, 3L
+        )
+    );
 
     // ==========================================
     // MAIN BENCHMARK ENTRY
@@ -74,7 +204,7 @@ public class SudokuBenchmark {
 
             System.out.println();
             System.out.println("╔════════════════════════════════════════════════════════════╗");
-            System.out.println("║ Benchmark Complete! Check 'benchmarks/benchmark_results'  ║");
+            System.out.println("✓ Benchmark Complete! Check 'benchmarks/benchmark_results.csv' ║");
             System.out.println("║            CSV for detailed analysis.                      ║");
             System.out.println("╚════════════════════════════════════════════════════════════╝");
 
@@ -165,23 +295,19 @@ public class SudokuBenchmark {
     // ==========================================
 
     /**
-     * Tests Complete Solver with multiple search strategies.
+     * Tests Complete Solver with multiple parameterized configurations.
      */
     private static void testCompleteSolver(SudokuInstance instance,
                                            List<BenchmarkRecord> allResults) {
-        SearchStrategy[] strategies = {
-            SearchStrategy.INPUT_ORDER,
-            SearchStrategy.DOM_OVER_WDEG,
-            SearchStrategy.MIN_DOM_SIZE
-        };
-
-        for (SearchStrategy strategy : strategies) {
-            String strategyName = "Complete_" + strategy.name();
-            testMultipleRuns(instance, strategyName, () -> {
+        for (CompleteConfig config : COMPLETE_CONFIGS) {
+            String solverName = config.name;
+            testMultipleRuns(instance, solverName, () -> {
                 SudokuGrid grid = new SudokuGrid(instance.getGrid(), instance.n);
                 CompleteSolver solver = new CompleteSolver(grid);
-                solver.setStrategy(strategy);
+                solver.setStrategy(config.strategy);
                 solver.setTimeout(TIMEOUT_SECONDS);
+                solver.configureRestarts(config.useRestarts, config.lubyBase, config.lubyUnit, config.lubyFactor);
+                solver.configureRandomization(config.randomizeOrder, config.randomSeed);
                 return solver.solve();
             }, allResults);
         }
