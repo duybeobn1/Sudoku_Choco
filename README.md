@@ -1,408 +1,188 @@
-# Sudoku Solver
+# Sudoku Solver & Benchmark Suite
 
-## 🏃 How to Run
-
-### From command line
-
-```bash
-# Compile
-javac -cp "lib/*" -d bin src/model/*.java src/solver/*.java src/heuristic/*.java src/util/*.java src/benchmark/*.java src/Main.java
-
-# Run demo mode
-java -cp "bin;lib/*" src.Main demo
-
-# Run full benchmark suite
-java -cp "bin;lib/*" src.Main benchmark
-
-# Show help / usage
-java -cp "bin;lib/*" src.Main help
-
-```
-
----
-
-## 📋 Project Overview
-
-A modular and well-structured architecture to solve Sudoku puzzles using:
-
-✅ **Complete Solver**: Constraint Programming (Choco Solver)  
-- Guarantees a solution if one exists  
-- Advanced search strategies (DOM_OVER_WDEG, MIN_DOM_SIZE, ACTIVITY_BASED)
-- Optimal for difficult puzzles
-- External dependency: Choco Solver library
-
-✅ **Incomplete Solver**: Backtracking + Heuristics  
-- Pure Java, no external dependency  
-- Three customizable heuristics: MRV, Degree, Hybrid (MRV + Degree)
-- Constraint propagation for search space reduction
-- Very efficient on easy/medium puzzles
-- Fast iteration and backtracking tracking
-
----
-
-## 📂 File Organization
-
-```text
-src/
-├── model/
-│   ├── SudokuGrid.java          # Grid representation
-│   ├── SolverResult.java        # Solving result container
-│
-├── solver/
-│   ├── SudokuSolver.java        # Abstract base class
-│   ├── CompleteSolver.java      # Complete solver (Choco)
-│   ├── IncompleteSolver.java    # Incomplete solver (Backtracking)
-│
-├── heuristic/
-│   ├── CellHeuristic.java       # Heuristic interface
-│   ├── MRVHeuristic.java        # Minimum Remaining Values
-│   ├── DegreeHeuristic.java     # Degree-based heuristic
-│   └── HybridHeuristic.java     # MRV + Degree hybrid
-│
-├── util/
-│   ├── SudokuValidator.java     # Grid validation
-│   ├── PuzzleParser.java        # File parsing
-│
-└── Main.java                    # Entry point (demo + benchmark)
-```
-
----
+A high-performance Sudoku Solver and Benchmarking platform combining **Constraint Programming (Choco Solver)** and **Heuristic Search**. It features a modern Web UI for interactive solving and real-time benchmark visualization.
 
 ## 🚀 Quick Start
 
-### Using the Complete Solver
-
-```java
-// Load a grid
-int[][] puzzleData = { /* ... */ };
-SudokuGrid grid = new SudokuGrid(puzzleData, 3);
-
-// Create and configure solver
-CompleteSolver solver = new CompleteSolver(grid);
-solver.setStrategy(CompleteSolver.SearchStrategy.DOM_OVER_WDEG);
-solver.setTimeout(10);  // 10 seconds
-
-// Solve
-SolverResult result = solver.solve();
-System.out.println("Solved: " + result.isSolved());
-System.out.println("Time: " + result.getTimeMs() + " ms");
-```
-
-### Using the Incomplete Solver
-
-```java
-// Load a grid
-SudokuGrid grid = new SudokuGrid(puzzleData, 3);
-
-// Create and configure solver
-IncompleteSolver solver = new IncompleteSolver(grid);
-solver.setHeuristic(new MRVHeuristic());
-solver.setPropagate(true);
-solver.setMaxIterations(100000);
-
-// Solve
-SolverResult result = solver.solve();
-System.out.println("Solved: " + result.isSolved());
-System.out.println("Time: " + result.getTimeMs() + " ms");
-```
-
-### Parsing from a file
-
-```java
-// Simple text file
-SudokuGrid grid = PuzzleParser.parseFromFile("puzzle.txt", 3);
-
-// MiniZinc format
-SudokuGrid grid = PuzzleParser.parseFromMiniZinc(new File("puzzle.dzn"));
-
-// Create manually
-int[][] data = { /* ... */ };
-SudokuGrid grid = PuzzleParser.createFromArray(data, 3);
-```
-
----
-
-## 🎯 Complete Solver Strategies
-
-| Strategy | Description | When to Use |
-|----------|-------------|------------|
-| `INPUT_ORDER` | Sequential variable ordering (baseline) | Comparisons, naive baseline |
-| `DOM_OVER_WDEG` | Domain over weighted degree (recommended) | Most puzzles - excellent balance |
-| `MIN_DOM_SIZE` | First-fail: smallest domain first | Easy to medium puzzles |
-
-```java
-CompleteSolver solver = new CompleteSolver(grid);
-solver.setStrategy(CompleteSolver.SearchStrategy.DOM_OVER_WDEG);
-solver.setTimeout(30);  // seconds
-```
-
----
-
-## 🧠 Incomplete Solver Heuristics
-
-### 1️⃣ MRVHeuristic (Minimum Remaining Values)
-- **Strategy**: Select cell with fewest candidate values
-- **Effectiveness**: Very high - aggressively reduces branching
-- **Speed**: Fast computation, minimal overhead
-- **Best for**: Most Sudoku instances (easy/medium/hard)
-
-```java
-IncompleteSolver solver = new IncompleteSolver(grid);
-solver.setHeuristic(new MRVHeuristic());
-```
-
-### 2️⃣ DegreeHeuristic (MRV + Degree Tie-breaking)
-- **Strategy**: Primary = fewest candidates (MRV); Tie-breaker = constrains most neighbors
-- **Effectiveness**: Very high on hard puzzles
-- **Speed**: Slightly slower due to degree computation
-- **Best for**: Hard/sparse puzzles with multiple candidate ties
-
-```java
-IncompleteSolver solver = new IncompleteSolver(grid);
-solver.setHeuristic(new DegreeHeuristic());
-```
-
-### ⚙️ Configuration Options
-
-```java
-IncompleteSolver solver = new IncompleteSolver(grid);
-solver.setHeuristic(new HybridHeuristic());      // Choose heuristic
-solver.setPropagate(true);                       // Enable candidate reduction
-solver.setMaxIterations(100_000);                // Iteration limit
-```
-
----
-
-## 📊 Benchmark & Dashboard Tools
-
-### 1️⃣ **Benchmark Suite** (`SudokuBenchmark.java`)
-Runs comprehensive tests across:
-- **Difficulties**: Easy, Medium, Hard
-- **Grid Sizes**: 9×9, 16×16, 25×25, and other n×n variants
-- **Complete Solver**: 3 strategies × N puzzles
-- **Incomplete Solver**: 2 heuristics × N puzzles
-- **Output**: CSV report with timing, iterations, backtracks, success rates
+### 1. Build the Backend
+Prerequisites: Java 17+, Maven.
 
 ```bash
-java -cp "bin;lib/*" src.Main benchmark
-# Generates: benchmarks/benchmark_results.csv
+cd back
+# Compile and package the project into a JAR
+mvn clean package
 ```
 
-**Puzzle Sources:**
+### 2. Run the API Server
+Start the backend server which handles solving logic, benchmarking, and file serving.
 
-#### Instance Generation
-We generated custom Sudoku instances programmatically to ensure controlled difficulty levels and comprehensive solver evaluation:
-- **Generation Method**: Instances were created using constraint-based generation algorithms (Z3 SMT solver) that start with a complete valid solution and selectively remove clues while maintaining puzzle uniqueness.
-- **Grid Flexibility**: Supports n×n grids where n = k² (e.g., 9×9 with 3×3 blocks, 16×16 with 4×4 blocks, 25×25 with 5×5 blocks)
-- **Difficulty Control**: Difficulty is determined by the number and placement of removed clues—fewer clues = harder puzzles. We generated instances across a spectrum:
-  - **Easy**: ~60% clue density
-  - **Medium**: ~40% clue density
-  - **Hard**: ~20% clue density
-- **Validation**: All generated instances are verified to have exactly one unique solution before benchmarking.
-
-#### Online Benchmark Sources
-Additional instances were sourced from established online repositories to validate performance against known difficult puzzles:
-- Popular Sudoku benchmark datasets (e.g., Project Euler, Kaggle)
-- Real-world hard instances with known solving times
-- Cross-validation of solver performance against published results
-
-### 2️⃣ **Benchmark Dashboard** (`benchmark_dashboard.html`)
-Interactive web UI to visualize results:
-- 📈 Charts: Time by solver, Success rates, Iterations, Complete vs Incomplete
-- 📋 Detailed results table
-- 🎯 KPIs: Success rate, fastest solver, slowest solver
-- ✨ No server required (loads CSV via client-side JS)
-
-**Usage:**
 ```bash
-# Go to the root of the projetct
-python -m http.server 8000
-
-# Then open: http://localhost:8000/benchmark_dashboard.html
+# Run the JAR in API mode
+java -jar target/sudoku-solver-1.0-SNAPSHOT.jar api
 ```
+*The server will start on `http://localhost:8080`.*
 
-### 3️⃣ **Interactive Solver** (`sudoku_solver.html`)
-Visual Sudoku solving interface:
-- 🎮 Load puzzles from benchmarks or create custom grids (9×9, 16×16, 25×25, or other n×n sizes)
-- ⚙️ Choose solver (Complete or Incomplete with any heuristic)
-- 🔍 Watch real-time solving with statistics
-- 📊 Performance metrics (time, iterations, backtracks)
-
-**Usage:**
-```bash
-# Open directly in browser or via HTTP server
-open sudoku_solver.html
-# or
-http://localhost:8000/sudoku_solver.html
-```
-
-## 🔬 Performance Analysis & Conclusion
-
-Our benchmarks on "Hard" instances (e.g., `sudoku_p89.dzn`) reveal distinct performance characteristics for each approach:
-
-1.  **Complete Solver (Choco)**:
-    *   **Strategy Matters**: `INPUT_ORDER` fails quickly on hard instances, while `DOM_OVER_WDEG` solves them efficiently (e.g., ~4.9s for a hard puzzle).
-    *   **Robustness**: The underlying Constraint Programming engine handles deep search trees well through advanced propagation and conflict learning.
-
-2.  **Incomplete Solver (Backtracking)**:
-    *   **High Throughput**: Capable of processing over 1 million iterations in under 6 seconds.
-    *   **Heuristic Limitations**: While `MRV` and `Degree` heuristics are vastly superior to naive backtracking, they may still get trapped in deep search sub-trees on specifically designed "Hard" instances, leading to timeouts despite high iteration speed.
-    *   **Use Case**: Extremely efficient for Easy to Medium puzzles, but requires advanced techniques (like restarts or clause learning) to match Choco on the hardest instances.
-
-**Conclusion**: For general-purpose solving, the Incomplete Solver is lightweight and fast. For guaranteed solving of complex, adversarial puzzles, the Complete Solver with `DOM_OVER_WDEG` remains the superior choice.
+### 3. Launch the Frontend
+Open the `front/index.html` file in your browser.
+*   **Recommended:** Use a local server (e.g., VS Code **Live Server**) to serve the `front` folder on `http://127.0.0.1:5500`.
+*   *Note: Ensure the backend API is running before using the web interface.*
 
 ---
 
-## 📝 Text File Formats
+## ✨ Features
 
-**Simple format (recommended):**
+### 🧩 Interactive Solver
+*   **Multiple Grid Sizes:** Supports standard 9x9, but also 4x4, 16x16, and 25x25 grids.
+*   **Example Loading:** Instantly load benchmark instances (e.g., `p0`, `p36`) from the server.
+*   **Real-time Solving:**
+    *   **Complete Solver:** Uses **Choco Solver** (Constraint Programming) with configurable strategies (InputOrder, DomOverWDeg, Luby Restarts).
+    *   **Incomplete Solver:** Backtracking with heuristics (Degree, MRV).
+    *   **Greedy Solver:** Extremely fast constructive heuristic (non-guaranteed).
 
-```text
-5 3 0 0 7 0 0 0 0
-6 0 0 1 9 5 0 0 0
-0 9 8 0 0 0 0 6 0
-...
+### 📊 Benchmark Suite
+*   **Real-time Streaming (SSE):** Watch benchmark progress live on the web dashboard.
+*   **Live Charts:**
+    *   Average Time by Configuration.
+    *   Success Rate by Difficulty.
+    *   **Method Comparison:** Visual comparison of Complete vs. Incomplete vs. Greedy performance.
+*   **Persistence:**
+    *   Results are automatically saved to `benchmark_results.csv`.
+    *   History is reloaded automatically when reopening the dashboard.
+*   **MiniZinc Support:** Automatically downloads and parses `.dzn` benchmark files.
+
+---
+
+## 🏗️ Architecture
+
+### Backend (Java)
+*   **Core Logic:** `com.sudoku.solver` containing the CP model and backtracking algorithms.
+*   **API Layer:** `com.sudoku.api.SudokuApi` using standard `com.sun.net.httpserver`.
+    *   `POST /api/solve/{type}`: Solves a given grid.
+    *   `GET /api/benchmark`: Streams benchmark results via Server-Sent Events (SSE).
+    *   `GET /api/benchmark/history`: Serves the saved CSV file.
+    *   `GET /api/example/{id}`: Loads `.dzn` files from `benchmarks_data/`.
+*   **Utils:** `PuzzleParser` for robust MiniZinc data extraction.
+
+### Frontend (HTML/CSS/JS)
+*   **Vanilla JS:** No heavy framework dependencies.
+*   **Chart.js:** For rendering benchmark analytics.
+*   **Dynamic UI:** CSS Grid for responsive Sudoku boards (up to 25x25).
+
+---
+
+## 📂 Project Structure
+
 ```
-
-- One line per Sudoku row  
-- Space-separated values  
-- 0 = empty cell  
-- Lines starting with `#` can be used as comments  
-
-**MiniZinc format:**
-
-```text
-% Comment
-n = 3;
-grid = array2d(1..9, 1..9, [
- 5, 3, 0, 0, 7, 0, 0, 0, 0,
- ...
-]);
+.
+├── src/main/java/com/sudoku/
+│   ├── api/            # HTTP Handlers (Solve, Benchmark, History)
+│   ├── benchmark/      # Benchmark Runner & Logic
+│   ├── solver/         # Solver Implementations (Complete, Greedy...)
+│   └── util/           # PuzzleParser (MiniZinc .dzn)
+├── front/              # Web Interface
+│   ├── index.html      # Main Dashboard
+│   ├── style.css       # Teal/Light Theme
+│   └── js/             # app.js (Logic) & api.js (Fetch calls)
+├── benchmarks_data/    # Downloaded .dzn files (Auto-generated)
+├── benchmark_results.csv # Persistent results file (Auto-generated)
+└── pom.xml             # Maven Configuration
 ```
 
 ---
 
-## ⚡ Performance Tips
+## 🎯 Solver Strategies
 
-### For the Complete Solver:
+### Complete Solver (Constraint Programming)
+Guarantees a solution if one exists using **Choco Solver**.
 
-1. Use `DOM_OVER_WDEG` or `ACTIVITY_BASED` for harder puzzles  
-2. Increase timeout for large puzzles (16x16+)  
-3. Compile with JVM optimization flags in production  
+| Strategy | Description |
+|----------|-------------|
+| `InputOrder` | Variables assigned in input order (baseline) |
+| `DomOverWDeg` | Domain over Weighted Degree heuristic (advanced) |
+| `Luby` | Luby sequence-based restart strategy (for hard instances) |
 
-### For the Incomplete Solver:
+### Incomplete Solver
+Fast backtracking with preprocessing heuristics.
 
-1. Always enable propagation (`setPropagate(true)`)  
-2. Use `MRVHeuristic` as default heuristic  
-3. Use `DegreeHeuristic` for very sparse puzzles  
-4. Set a reasonable iteration limit to avoid timeouts  
+| Heuristic | Description |
+|-----------|-------------|
+| `Degree` | Select cell with most constraints |
+| `MRV` | Minimum Remaining Values (most constrained first) |
 
-### General comparison:
-
-- **Complete**: Slower but guarantees finding a solution  
-- **Incomplete**: Very fast on easy/medium puzzles, may fail on very hard ones  
+### Greedy Solver
+Extremely fast constructive heuristic (no backtracking, no guarantee).
 
 ---
 
-## 🧪 Full Usage Example
+## 📊 Benchmark Results
 
-```java
-import src.model.SudokuGrid;
-import src.model.SolverResult;
-import src.solver.CompleteSolver;
-import src.solver.IncompleteSolver;
-import src.heuristic.MRVHeuristic;
+Results are persisted in `benchmark_results.csv` with the following columns:
 
-public class Example {
-    public static void main(String[] args) {
-        // Create a grid
-        int[][] puzzle = { /* ... */ };
-        SudokuGrid grid = new SudokuGrid(puzzle, 3);
-
-        System.out.println("Original puzzle:");
-        grid.print();
-
-        // Solve with complete solver
-        System.out.println("\n=== Complete Solver ===");
-        CompleteSolver complete = new CompleteSolver(grid);
-        SolverResult completeResult = complete.solve();
-        System.out.println("Solved: " + completeResult.isSolved());
-        System.out.println("Time: " + completeResult.getTimeMs() + " ms");
-
-        // Solve with incomplete solver
-        System.out.println("\n=== Incomplete Solver ===");
-        IncompleteSolver incomplete = new IncompleteSolver(grid);
-        incomplete.setHeuristic(new MRVHeuristic());
-        SolverResult incompleteResult = incomplete.solve();
-        System.out.println("Solved: " + incompleteResult.isSolved());
-        System.out.println("Time: " + incompleteResult.getTimeMs() + " ms");
-
-        // Compare performance
-        System.out.println("\n=== Comparison ===");
-        if (completeResult.isSolved() && incompleteResult.isSolved()) {
-            System.out.println("Complete faster: " +
-                    (completeResult.getTimeMs() < incompleteResult.getTimeMs()));
-        }
-    }
-}
 ```
+Instance,Difficulty,Strategy,Value,Constraints,Restart,SolverType,TimeMs,Iterations,Backtracks,Status
+p0,Easy,InputOrder,9,324,Luby,Complete,145.32,1250,45,SOLVED
+p1,Medium,DomOverWDeg,9,324,Luby,Complete,1892.15,8920,2341,SOLVED
+p2,Hard,Greedy,9,324,None,Greedy,0.12,0,0,TIMEOUT
+```
+
+---
+
+## ⚙️ Configuration
+
+### Backend
+*   **Benchmark Instances:** Edit the difficulty lists in `SudokuBenchmark.java`:
+    ```java
+    private static final int[] EASY = {0, 1, 2, ...};
+    private static final int[] MEDIUM = {10, 11, 12, ...};
+    private static final int[] HARD = {50, 51, 52, ...};
+    ```
+
+*   **Download Source:** MiniZinc data is auto-fetched from the configured URL.
+
+### Frontend
+*   **API Base URL:** Change in `api.js` if backend runs on a different port:
+    ```javascript
+    const API_BASE = 'http://localhost:8080';
+    ```
+
+---
+
+## 🧪 Running Tests
+
+### Single Instance Solver
+1.  Click on **Solver** tab.
+2.  Select a grid size (default: 9x9).
+3.  (Optional) Load an example puzzle.
+4.  Choose solver type and strategy.
+5.  Click **Solve**.
+
+### Full Benchmark Suite
+1.  Click on **Benchmark** tab.
+2.  Charts and table populate automatically from `benchmark_results.csv` on page load.
+3.  Click **Start Global Benchmark** to run a fresh suite.
+4.  Watch real-time progress with live chart updates.
+5.  Results are saved to disk automatically.
+
+---
+
+## 🐛 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| **Port 8080 already in use** | Change the port in `SudokuApi.java` or kill the existing process |
+| **CORS errors** | Backend is configured with CORS headers; ensure both frontend and backend URLs are correct |
+| **Charts not rendering** | Refresh the page after benchmark completes; ensure `chart.js` library is loaded |
 
 ---
 
 ## 📦 Dependencies
 
-### Required:
+### Backend
+*   **Java 17+**
+*   **Choco Solver 4.10.x** (Constraint Programming)
+*   **Maven** (Build tool)
 
-- Java 8+
-
-### Optional:
-
-- **Choco Solver** (for the complete solver)
-
-The incomplete solver has **no external dependencies**.
-
----
-
-## 🛠️ Extension and Customization
-
-### Create a new heuristic:
-
-```java
-public class CustomHeuristic implements CellHeuristic {
-    @Override
-    public int[] selectCell(SudokuGrid grid) {
-        // Your selection logic here
-        return new int[]{row, col};
-    }
-}
-
-// Use:
-IncompleteSolver solver = new IncompleteSolver(grid);
-solver.setHeuristic(new CustomHeuristic());
-```
-
-### Create a new solver:
-
-```java
-public class CustomSolver extends SudokuSolver {
-    @Override
-    public SolverResult solve() {
-        startTime = System.currentTimeMillis();
-        // Your algorithm here
-        boolean solved = false;
-        // ...
-        finalizeResult(solved);
-        return result;
-    }
-}
-```
-
----
-
-## 🎓 Notes
-
-- **Separation of Concerns**: Each class has a single clear responsibility  
-- **Design Patterns**: Strategy (heuristics), Template Method (solver base)  
-- **Classical algorithms**: Backtracking, CSP, Constraint Propagation  
-- **Optimizations**: MRV, degree heuristic, early conflict detection  
-- **Scalability**: Supports 9x9, 16x16, and other \(n^2 \times n^2\) sizes
+### Frontend
+*   **Chart.js 3.x** (Analytics visualization)
+*   **Vanilla JavaScript** (No framework)
+*   **Modern Browser** (ES6+ support)

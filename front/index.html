@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sudoku Solver Pro</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Chart.js (Benchmark tab) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="#" class="navbar-brand">Sudoku Solver Pro</a>
+      <div class="navbar-nav">
+        <button class="nav-btn active" data-tab="solver">Solver</button>
+        <button class="nav-btn" data-tab="benchmark">Benchmark</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    <!-- SOLVER MODULE (unchanged) -->
+    <div id="solver" class="module active">
+      <h1>Interactive Solver</h1>
+
+      <div class="tool-panel">
+        <h3>Configuration</h3>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label>Grid Size</label>
+                <select id="gridSize">
+                    <option value="2">4x4</option>
+                    <option value="3" selected>9x9</option>
+                    <option value="4">16x16</option>
+                    <option value="5">25x25</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Load Example</label>
+                <select id="loadExample">
+                    <option value="">-- Custom --</option>
+                    <option value="0">Easy (p0)</option>
+                    <option value="36">Medium (p36)</option>
+                    <option value="89">Hard (p89)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Solver Type</label>
+                <select id="solverType">
+                    <option value="complete">Complete (Choco)</option>
+                    <option value="incomplete" selected>Incomplete (Backtracking)</option>
+                    <option value="greedy">Greedy (Fast)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Actions</label>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btnSolve" class="btn-solve">Solve</button>
+                    <button id="btnReset" class="btn-reset-puzzle">Reset</button>
+                    <button id="btnClear" class="btn-clear-all">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+      </div>
+
+      <div class="solver-container">
+        <div id="sudokuGrid" class="sudoku-grid"></div>
+      </div>
+    </div>
+
+    <!-- BENCHMARK MODULE (updated) -->
+    <div id="benchmark" class="module">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">Performance Benchmarks</h1>
+        <button id="btnStartBenchmark" type="button" class="btn-solve" style="font-size: 16px;">Start Global Benchmark</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi">
+          <div class="kpi-label">Total Runs</div>
+          <div class="kpi-value" id="kpiTotalRuns">0</div>
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-label">Success Rate</div>
+          <div class="kpi-value" id="kpiSuccessRate">0%</div>
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-label">Avg Time</div>
+          <div class="kpi-value" id="kpiAvgTime">0 ms</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts">
+        <div class="chart-box">
+          <h3>Avg Time by Configuration (ms)</h3>
+          <canvas id="timeChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <h3>Success by Difficulty (runs)</h3>
+          <canvas id="successChart"></canvas>
+        </div>
+
+        <!-- NEW (1/2): Compare Complete vs Incomplete vs Greedy (avg time) -->
+        <div class="chart-box">
+          <h3>Avg Time by Method (ms)</h3>
+          <canvas id="methodTimeChart"></canvas>
+        </div>
+
+        <!-- NEW (2/2): Compare Complete vs Incomplete vs Greedy (success rate) -->
+        <div class="chart-box">
+          <h3>Success Rate by Method (%)</h3>
+          <canvas id="methodSuccessChart"></canvas>
+        </div>
+
+        <!-- Table -->
+        <div class="table-box">
+          <h3>Detailed Results</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Instance</th>
+                <th>Diff</th>
+                <th>Config</th>
+                <th>Solver</th>
+                <th>Time (ms)</th>
+                <th>Iter</th>
+                <th>Back</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="benchmarkTableBody">
+              <tr>
+                <td colspan="8" class="loading">No benchmark data yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
