@@ -6,6 +6,8 @@ import src.model.SudokuGrid;
 import src.model.SolverResult;
 import src.solver.CompleteSolver;
 import src.solver.CompleteSolver.SearchStrategy;
+import src.solver.CompleteSolver.ValueHeuristic;
+import src.solver.CompleteSolver.RestartType;
 import src.solver.IncompleteSolver;
 
 import java.io.*;
@@ -39,8 +41,177 @@ public class SudokuBenchmark {
 
     // Benchmark configuration
     private static final int BENCHMARK_RUNS = 3;                // Runs per configuration
-    private static final long ITERATION_LIMIT = 1_000_000;    // Max iterations for incomplete solver
+    private static final long ITERATION_LIMIT = 1_000_000;      // Max iterations for incomplete solver
     private static final int TIMEOUT_SECONDS = 60;              // Timeout for each solver (1 min)
+
+    /**
+     * Parameterized configuration for a single CompleteSolver run.
+     */
+    private static class CompleteConfig {
+        String name;                 // Label for output / CSV
+        SearchStrategy strategy;     // High-level search strategy
+        ValueHeuristic valueHeuristic; // Value selection heuristic
+        String consistencyLevel;     // Consistency level for allDifferent ("DEFAULT", "AC", "BC")
+        RestartType restartType;     // Restart policy type
+        boolean useRestarts;         // Enable restarts
+        int lubyBase;                // Base for Luby / Geometric
+        int lubyUnit;                // FailCounter unit
+        int lubyFactor;              // Luby growth factor OR (ratio*10) for geometric
+        boolean randomizeOrder;      // Shuffle variable order
+        long randomSeed;             // Seed for reproducibility (0 = system nanoTime)
+
+        CompleteConfig(String name,
+                       SearchStrategy strategy,
+                       ValueHeuristic valueHeuristic,
+                       String consistencyLevel,
+                       RestartType restartType,
+                       boolean useRestarts,
+                       int lubyBase,
+                       int lubyUnit,
+                       int lubyFactor,
+                       boolean randomizeOrder,
+                       long randomSeed) {
+            this.name = name;
+            this.strategy = strategy;
+            this.valueHeuristic = valueHeuristic;
+            this.consistencyLevel = consistencyLevel;
+            this.restartType = restartType;
+            this.useRestarts = useRestarts;
+            this.lubyBase = lubyBase;
+            this.lubyUnit = lubyUnit;
+            this.lubyFactor = lubyFactor;
+            this.randomizeOrder = randomizeOrder;
+            this.randomSeed = randomSeed;
+        }
+    }
+
+    /**
+     * Set of CompleteSolver configurations to benchmark.
+     *
+     * We explore several combinations of:
+     *  - strategy (INPUT_ORDER, DOM_OVER_WDEG, MIN_DOM_SIZE, RANDOM)
+     *  - Luby restart base values
+     *  - randomized variable orders with different seeds
+     */
+    private static final List<CompleteConfig> COMPLETE_CONFIGS = Arrays.asList(
+        // Baseline: input order, no restarts
+        new CompleteConfig(
+            "Complete_InputOrder_NoRestart",
+            SearchStrategy.INPUT_ORDER,
+            ValueHeuristic.MIN,
+            "DEFAULT",
+            RestartType.LUBY,
+            false, 0, 1, 2,
+            false, 0L
+        ),
+
+        // INPUT_ORDER + Luby restarts with different bases
+        new CompleteConfig(
+            "Complete_InputOrder_Luby100",
+            SearchStrategy.INPUT_ORDER,
+            ValueHeuristic.MIN,
+            "DEFAULT",
+            RestartType.LUBY,
+            true, 100, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_InputOrder_Luby500",
+            SearchStrategy.INPUT_ORDER,
+            ValueHeuristic.MIN,
+            "AC",
+            RestartType.LUBY,
+            true, 500, 1, 2,
+            false, 0L
+        ),
+
+        // DomOverWDeg with multiple Luby bases
+        new CompleteConfig(
+            "Complete_DomOverWDeg_NoRestart",
+            SearchStrategy.DOM_OVER_WDEG,
+            ValueHeuristic.MIN,
+            "DEFAULT",
+            RestartType.LUBY,
+            false, 0, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_DomOverWDeg_Luby100",
+            SearchStrategy.DOM_OVER_WDEG,
+            ValueHeuristic.MIN,
+            "DEFAULT",
+            RestartType.LUBY,
+            true, 100, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_DomOverWDeg_Luby500",
+            SearchStrategy.DOM_OVER_WDEG,
+            ValueHeuristic.MAX,
+            "AC",
+            RestartType.LUBY,
+            true, 500, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_DomOverWDeg_Luby1000",
+            SearchStrategy.DOM_OVER_WDEG,
+            ValueHeuristic.RANDOM_VAL,
+            "DEFAULT",
+            RestartType.LUBY,
+            true, 1000, 1, 2,
+            false, 0L
+        ),
+
+        // MinDom with and without restarts
+        new CompleteConfig(
+            "Complete_MinDom_NoRestart",
+            SearchStrategy.MIN_DOM_SIZE,
+            ValueHeuristic.MIN,
+            "DEFAULT",
+            RestartType.LUBY,
+            false, 0, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_MinDom_Luby200",
+            SearchStrategy.MIN_DOM_SIZE,
+            ValueHeuristic.RANDOM_VAL,
+            "AC",
+            RestartType.LUBY,
+            true, 200, 1, 2,
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_MinDom_Luby800",
+            SearchStrategy.MIN_DOM_SIZE,
+            ValueHeuristic.MIDDLE,
+            "DEFAULT",
+            RestartType.LUBY,
+            true, 800, 1, 2,
+            false, 0L
+        ),
+
+        // New: explicit geometric restarts configurations
+        new CompleteConfig(
+            "Complete_DomOverWDeg_MaxVal_Geom10_1.1",
+            SearchStrategy.DOM_OVER_WDEG,
+            ValueHeuristic.MAX,
+            "DEFAULT",
+            RestartType.GEOMETRIC,
+            true, 10, 1, 11,   // base=10, ratio=11/10=1.1
+            false, 0L
+        ),
+        new CompleteConfig(
+            "Complete_InputOrder_Middle_AC_Geom10_1.2",
+            SearchStrategy.INPUT_ORDER,
+            ValueHeuristic.MIDDLE,
+            "AC",
+            RestartType.GEOMETRIC,
+            true, 10, 1, 12,   // base=10, ratio=12/10=1.2
+            false, 0L
+        )
+    );
 
     // ==========================================
     // MAIN BENCHMARK ENTRY
@@ -74,7 +245,7 @@ public class SudokuBenchmark {
 
             System.out.println();
             System.out.println("╔════════════════════════════════════════════════════════════╗");
-            System.out.println("║ Benchmark Complete! Check 'benchmarks/benchmark_results'  ║");
+            System.out.println("✓ Benchmark Complete! Check 'benchmarks/benchmark_results.csv' ║");
             System.out.println("║            CSV for detailed analysis.                      ║");
             System.out.println("╚════════════════════════════════════════════════════════════╝");
 
@@ -165,23 +336,55 @@ public class SudokuBenchmark {
     // ==========================================
 
     /**
-     * Tests Complete Solver with multiple search strategies.
+     * Build a human-readable description for a CompleteSolver configuration.
+     * This makes it explicit (for console, CSV, and HTML) which strategy,
+     * value heuristic, consistency level, and restart policy are used.
+     */
+    private static String describeCompleteConfig(CompleteConfig c) {
+        String restartDesc;
+        if (!c.useRestarts || c.lubyBase <= 0) {
+            restartDesc = "NoRestart";
+        } else if (c.restartType == RestartType.LUBY) {
+            // Use semicolons instead of commas to keep CSV parsing simple
+            restartDesc = String.format("Luby(base=%d;factor=%d)", c.lubyBase, c.lubyFactor);
+        } else {
+            double ratio = c.lubyFactor / 10.0; // e.g. 11 -> 1.1
+            restartDesc = String.format("Geom(base=%d;ratio=%.1f)", c.lubyBase, ratio);
+        }
+
+        String orderDesc = c.randomizeOrder
+                ? ("RandomOrder(seed=" + c.randomSeed + ")")
+                : "DeterministicOrder";
+
+        // Use " | " separators instead of commas inside the label so that
+        // the CSV (comma-separated) can be parsed with a simple split(',').
+        return String.format(
+                "Complete[%s | Val=%s | Cons=%s | %s | %s]",
+                c.strategy,
+                c.valueHeuristic,
+                c.consistencyLevel,
+                restartDesc,
+                orderDesc
+        );
+    }
+
+    /**
+     * Tests Complete Solver with multiple parameterized configurations.
      */
     private static void testCompleteSolver(SudokuInstance instance,
                                            List<BenchmarkRecord> allResults) {
-        SearchStrategy[] strategies = {
-            SearchStrategy.INPUT_ORDER,
-            SearchStrategy.DOM_OVER_WDEG,
-            SearchStrategy.MIN_DOM_SIZE
-        };
-
-        for (SearchStrategy strategy : strategies) {
-            String strategyName = "Complete_" + strategy.name();
-            testMultipleRuns(instance, strategyName, () -> {
+        for (CompleteConfig config : COMPLETE_CONFIGS) {
+            String solverName = describeCompleteConfig(config);
+            testMultipleRuns(instance, solverName, () -> {
                 SudokuGrid grid = new SudokuGrid(instance.getGrid(), instance.n);
                 CompleteSolver solver = new CompleteSolver(grid);
-                solver.setStrategy(strategy);
+                solver.setStrategy(config.strategy);
+                solver.setValueHeuristic(config.valueHeuristic);
+                solver.setConsistencyLevel(config.consistencyLevel);
+                solver.setRestartType(config.restartType);
                 solver.setTimeout(TIMEOUT_SECONDS);
+                solver.configureRestarts(config.useRestarts, config.lubyBase, config.lubyUnit, config.lubyFactor);
+                solver.configureRandomization(config.randomizeOrder, config.randomSeed);
                 return solver.solve();
             }, allResults);
         }
@@ -245,7 +448,7 @@ public class SudokuBenchmark {
                 times.add(result.getTimeMs());
                 iterations.add(result.getIterations());
                 backtracks.add(result.getBacktracks());
-            } catch (Exception e) {
+            } catch (Throwable e) { // catch Error as well (e.g., OutOfMemoryError)
                 times.add((long)(TIMEOUT_SECONDS * 1000));
                 iterations.add(0L);
                 backtracks.add(0L);

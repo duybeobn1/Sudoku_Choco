@@ -1,16 +1,43 @@
 Instance,Difficulty,SolverType,Size,Solver,MeanTimeMs,StdDevMs,MeanIterations,MeanBacktracks,SuccessRate,Status
-sudoku_p0.dzn,Easy,Complete,9,Complete_INPUT_ORDER,45.67,55.39,1,0,100.0%,SAT
-sudoku_p0.dzn,Easy,Complete,9,Complete_DOM_OVER_WDEG,5.67,3.09,1,0,100.0%,SAT
-sudoku_p0.dzn,Easy,Complete,9,Complete_MIN_DOM_SIZE,3.00,0.82,1,0,100.0%,SAT
-sudoku_p0.dzn,Easy,Incomplete,9,Incomplete_MRV,2.00,1.41,111,201,100.0%,SAT
-sudoku_p0.dzn,Easy,Incomplete,9,Incomplete_Degree,1.67,0.94,34,57,100.0%,SAT
-sudoku_p36.dzn,Medium,Complete,16,Complete_INPUT_ORDER,6.00,0.00,1,0,100.0%,SAT
-sudoku_p36.dzn,Medium,Complete,16,Complete_DOM_OVER_WDEG,5.67,0.47,1,0,100.0%,SAT
-sudoku_p36.dzn,Medium,Complete,16,Complete_MIN_DOM_SIZE,5.33,1.25,1,0,100.0%,SAT
-sudoku_p36.dzn,Medium,Incomplete,16,Incomplete_MRV,113.33,6.94,23591,47151,100.0%,SAT
-sudoku_p36.dzn,Medium,Incomplete,16,Incomplete_Degree,1642.67,15.28,111937,223842,100.0%,SAT
-sudoku_p89.dzn,Hard,Complete,25,Complete_INPUT_ORDER,60005.67,1.70,269749,539452,0.0%,TIMEOUT
-sudoku_p89.dzn,Hard,Complete,25,Complete_DOM_OVER_WDEG,4724.67,45.88,20679,41321,100.0%,SAT
-sudoku_p89.dzn,Hard,Complete,25,Complete_MIN_DOM_SIZE,42389.67,140.11,192259,384470,100.0%,SAT
-sudoku_p89.dzn,Hard,Incomplete,25,Incomplete_MRV,5647.00,263.04,1000044,2000002,0.0%,TIMEOUT
-sudoku_p89.dzn,Hard,Incomplete,25,Incomplete_Degree,41959.67,415.93,1000043,2000000,0.0%,TIMEOUT
+sudoku_p0.dzn,Easy,Complete,9,Complete[INPUT_ORDER, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],19.33,22.40,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[INPUT_ORDER, Val=MIN, Cons=DEFAULT, Luby(base=100,factor=2), DeterministicOrder],1.67,0.47,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[INPUT_ORDER, Val=MIN, Cons=AC, Luby(base=500,factor=2), DeterministicOrder],0.67,0.47,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[DOM_OVER_WDEG, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],1.67,1.70,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[DOM_OVER_WDEG, Val=MIN, Cons=DEFAULT, Luby(base=100,factor=2), DeterministicOrder],0.67,0.47,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[DOM_OVER_WDEG, Val=MAX, Cons=AC, Luby(base=500,factor=2), DeterministicOrder],0.67,0.47,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[DOM_OVER_WDEG, Val=RANDOM_VAL, Cons=DEFAULT, Luby(base=1000,factor=2), DeterministicOrder],1.00,0.82,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[MIN_DOM_SIZE, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],1.00,0.82,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[MIN_DOM_SIZE, Val=RANDOM_VAL, Cons=AC, Luby(base=200,factor=2), DeterministicOrder],1.00,0.00,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[MIN_DOM_SIZE, Val=MIDDLE, Cons=DEFAULT, Luby(base=800,factor=2), DeterministicOrder],1.00,0.82,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[DOM_OVER_WDEG, Val=MAX, Cons=DEFAULT, Geom(base=10,ratio=1.1), DeterministicOrder],0.67,0.47,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Complete,9,Complete[INPUT_ORDER, Val=MIDDLE, Cons=AC, Geom(base=10,ratio=1.2), DeterministicOrder],0.67,0.47,1,0,100.0%,SAT
+sudoku_p0.dzn,Easy,Incomplete,9,Incomplete_MRV,1.00,0.82,111,201,100.0%,SAT
+sudoku_p0.dzn,Easy,Incomplete,9,Incomplete_Degree,0.67,0.47,34,57,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[INPUT_ORDER, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],2.67,0.94,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[INPUT_ORDER, Val=MIN, Cons=DEFAULT, Luby(base=100,factor=2), DeterministicOrder],2.67,0.47,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[INPUT_ORDER, Val=MIN, Cons=AC, Luby(base=500,factor=2), DeterministicOrder],1.67,0.47,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[DOM_OVER_WDEG, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],2.33,0.47,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[DOM_OVER_WDEG, Val=MIN, Cons=DEFAULT, Luby(base=100,factor=2), DeterministicOrder],2.67,0.47,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[DOM_OVER_WDEG, Val=MAX, Cons=AC, Luby(base=500,factor=2), DeterministicOrder],2.00,0.82,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[DOM_OVER_WDEG, Val=RANDOM_VAL, Cons=DEFAULT, Luby(base=1000,factor=2), DeterministicOrder],2.33,0.47,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[MIN_DOM_SIZE, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],2.00,0.00,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[MIN_DOM_SIZE, Val=RANDOM_VAL, Cons=AC, Luby(base=200,factor=2), DeterministicOrder],1.33,0.47,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[MIN_DOM_SIZE, Val=MIDDLE, Cons=DEFAULT, Luby(base=800,factor=2), DeterministicOrder],2.00,0.00,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[DOM_OVER_WDEG, Val=MAX, Cons=DEFAULT, Geom(base=10,ratio=1.1), DeterministicOrder],2.00,0.00,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Complete,16,Complete[INPUT_ORDER, Val=MIDDLE, Cons=AC, Geom(base=10,ratio=1.2), DeterministicOrder],1.00,0.00,1,0,100.0%,SAT
+sudoku_p36.dzn,Medium,Incomplete,16,Incomplete_MRV,59.00,2.94,23591,47151,100.0%,SAT
+sudoku_p36.dzn,Medium,Incomplete,16,Incomplete_Degree,786.33,3.68,111937,223842,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[INPUT_ORDER, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],60002.33,0.94,535588,1071121,0.0%,TIMEOUT
+sudoku_p89.dzn,Hard,Complete,25,Complete[INPUT_ORDER, Val=MIN, Cons=DEFAULT, Luby(base=100,factor=2), DeterministicOrder],60002.00,0.00,532811,1065561,0.0%,TIMEOUT
+sudoku_p89.dzn,Hard,Complete,25,Complete[INPUT_ORDER, Val=MIN, Cons=AC, Luby(base=500,factor=2), DeterministicOrder],6054.00,9.27,41320,82569,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[DOM_OVER_WDEG, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],2562.33,13.30,20679,41321,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[DOM_OVER_WDEG, Val=MIN, Cons=DEFAULT, Luby(base=100,factor=2), DeterministicOrder],1513.00,3.27,9823,19577,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[DOM_OVER_WDEG, Val=MAX, Cons=AC, Luby(base=500,factor=2), DeterministicOrder],600.67,0.94,2581,5109,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[DOM_OVER_WDEG, Val=RANDOM_VAL, Cons=DEFAULT, Luby(base=1000,factor=2), DeterministicOrder],1803.67,454.27,12636,25205,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[MIN_DOM_SIZE, Val=MIN, Cons=DEFAULT, NoRestart, DeterministicOrder],23313.33,38.56,192259,384470,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[MIN_DOM_SIZE, Val=RANDOM_VAL, Cons=AC, Luby(base=200,factor=2), DeterministicOrder],3394.33,472.06,18724,37406,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[MIN_DOM_SIZE, Val=MIDDLE, Cons=DEFAULT, Luby(base=800,factor=2), DeterministicOrder],60000.00,0.00,0,0,0.0%,TIMEOUT
+sudoku_p89.dzn,Hard,Complete,25,Complete[DOM_OVER_WDEG, Val=MAX, Cons=DEFAULT, Geom(base=10,ratio=1.1), DeterministicOrder],16251.33,24.28,114076,227338,100.0%,SAT
+sudoku_p89.dzn,Hard,Complete,25,Complete[INPUT_ORDER, Val=MIDDLE, Cons=AC, Geom(base=10,ratio=1.2), DeterministicOrder],60001.67,0.94,233825923,457798399,0.0%,TIMEOUT
+sudoku_p89.dzn,Hard,Incomplete,25,Incomplete_MRV,3368.33,136.99,1000044,2000002,0.0%,TIMEOUT
+sudoku_p89.dzn,Hard,Incomplete,25,Incomplete_Degree,15992.00,51.44,1000043,2000000,0.0%,TIMEOUT

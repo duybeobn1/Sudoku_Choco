@@ -250,9 +250,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .kpi-value {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .charts {

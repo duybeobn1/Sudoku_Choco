@@ -47,6 +47,7 @@
                         <div class="control-group">
                             <label for="solverMethod">Solver Method</label>
                             <select id="solverMethod">
+                                <option value="auto" selected>Auto (Recommended)</option>
                                 <option value="complete">Complete (Backtracking + MRV)</option>
                                 <option value="incomplete">Incomplete (Greedy/Fast)</option>
                             </select>
@@ -135,7 +136,11 @@
                                 <tr>
                                     <th>Instance</th>
                                     <th>Difficulty</th>
-                                    <th>Solver</th>
+                                    <th>Strategy</th>
+                                    <th>Val</th>
+                                    <th>Cons.</th>
+                                    <th>Restart</th>
+                                    <th>Order</th>
                                     <th>Type</th>
                                     <th>Time (ms)</th>
                                     <th>Iterations</th>

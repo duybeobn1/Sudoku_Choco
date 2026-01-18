@@ -12,12 +12,16 @@ class SudokuSolverApp {
             "./benchmarks/sudoku_p36.dzn",
             "./benchmarks/sudoku_p89.dzn",
         ];
+        // Mapping from grid size (e.g. 9,16,25) to recommended solver method
+        // ('complete' or 'incomplete'), computed from benchmark_results.csv
+        this.bestSolverBySize = {};
         this.init();
     }
 
     init() {
         this.populatePuzzleSelect();
         this.generateGrid(9);
+        this.loadBenchmarkAdvice();
     }
 
     populatePuzzleSelect() {
@@ -179,7 +183,19 @@ class SudokuSolverApp {
     }
 
     async runSolver() {
-        const method = document.getElementById('solverMethod').value;
+        let method = document.getElementById('solverMethod').value;
+
+        // Auto-select method based on offline benchmark results if available
+        if (method === 'auto') {
+            const recommended = this.bestSolverBySize[this.currentSize];
+            if (recommended === 'complete' || recommended === 'incomplete') {
+                method = recommended;
+            } else {
+                // Fallback heuristic if no benchmark info for this size
+                method = this.currentSize <= 9 ? 'complete' : 'incomplete';
+            }
+        }
+
         const inputs = Array.from(document.querySelectorAll('.cell'));
 
         const board = [];
@@ -312,6 +328,88 @@ class SudokuSolverApp {
             }
         }
         return true;
+    }
+
+    // ==========================
+    // Benchmark-based advice
+    // ==========================
+
+    async loadBenchmarkAdvice() {
+        try {
+            const resp = await fetch('./benchmarks/benchmark_results.csv');
+            if (!resp.ok) return;
+            const text = await resp.text();
+            this.computeBestSolverFromCSV(text);
+        } catch (e) {
+            console.warn('Could not load benchmark_results.csv', e);
+        }
+    }
+
+    computeBestSolverFromCSV(text) {
+        const lines = text.trim().split('\n');
+        if (lines.length <= 1) return;
+        const headers = lines[0].split(',').map(h => h.trim());
+
+        const idx = name => headers.indexOf(name);
+        const iSize = idx('Size');
+        const iType = idx('SolverType');
+        const iTime = idx('MeanTimeMs');
+        const iStatus = idx('Status');
+        if (iSize < 0 || iType < 0 || iTime < 0 || iStatus < 0) return;
+
+        // best[gridSize][solverType] = min time
+        const best = {};
+
+        lines.slice(1)
+            .filter(line => line.trim().length > 0)
+            .forEach(line => {
+                const raw = line.split(',').map(v => v.trim());
+                let values;
+                if (raw.length > headers.length) {
+                    // Reconstruct Solver field that may contain commas
+                    const head = raw.slice(0, 4);
+                    const tail = raw.slice(-6);
+                    const solverParts = raw.slice(4, raw.length - 6);
+                    const solver = solverParts.join(',');
+                    values = [...head, solver, ...tail];
+                } else {
+                    values = raw;
+                }
+
+                const status = values[iStatus];
+                if (status !== 'SAT') return; // only consider successful runs
+
+                const size = parseInt(values[iSize], 10);
+                const type = values[iType];   // "Complete" or "Incomplete"
+                const time = parseFloat(values[iTime]);
+                if (Number.isNaN(size) || Number.isNaN(time)) return;
+
+                if (!best[size]) best[size] = {};
+                if (!best[size][type] || time < best[size][type]) {
+                    best[size][type] = time;
+                }
+            });
+
+        // Decide global best type per size
+        this.bestSolverBySize = {};
+        Object.keys(best).forEach(sizeStr => {
+            const size = parseInt(sizeStr, 10);
+            const entry = best[size];
+            let chosenType = null;
+            let bestTime = Infinity;
+            ['Complete', 'Incomplete'].forEach(t => {
+                if (entry[t] !== undefined && entry[t] < bestTime) {
+                    bestTime = entry[t];
+                    chosenType = t;
+                }
+            });
+            if (chosenType) {
+                // Map CSV type to internal method name
+                this.bestSolverBySize[size] = (chosenType === 'Complete') ? 'complete' : 'incomplete';
+            }
+        });
+
+        console.log('Best solver by size (from benchmark):', this.bestSolverBySize);
     }
 
     showLoading(text) {
