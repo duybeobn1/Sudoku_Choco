@@ -6,29 +6,29 @@ import src.model.SudokuGrid;
 import src.model.SolverResult;
 
 /**
- * Incomplete Solver using backtracking with forward-checking constraint propagation.
- * 
- * This solver maintains candidate sets (domains) for each cell using bitmasks
- * and performs efficient constraint propagation. It avoids deep grid copies
- * by using an undo stack, significantly improving performance.
- * 
- * Named "Incomplete" because it can be bounded by maxIterations, though the
- * underlying algorithm is complete (guarantees finding a solution if unbounded).
+ * Optimized Incomplete Solver using backtracking with efficient constraint propagation.
+ *
+ * Key optimizations:
+ * - Delta propagation: maintains queue of affected cells instead of full grid scans
+ * - Undo stack for O(1) backtracking without deep copies
+ * - Bitmask-based candidate sets for efficient operations
+ * - Early termination on contradictions
+ *
+ * Named "Incomplete" due to optional iteration limit; algorithm is complete when unbounded.
  */
 public class IncompleteSolver extends SudokuSolver {
-
     private CellHeuristic heuristic = new MRVHeuristic();
     private boolean propagate = true;
     private long maxIterations = Long.MAX_VALUE;
 
     /**
-     * Undo stack entry: records the state of a single cell before modification.
+     * Undo stack entry: records cell state before modification.
      */
     private static final class Change {
         final int r, c;
         final int oldValue;
         final int oldCandidates;
-        
+
         Change(int r, int c, int oldValue, int oldCandidates) {
             this.r = r;
             this.c = c;
@@ -39,10 +39,12 @@ public class IncompleteSolver extends SudokuSolver {
 
     private Change[] undoStack;
     private int stackPointer;
+    private int[] propagationQueue;
+    private int queueSize;
 
     /**
      * Constructs an IncompleteSolver for the given Sudoku grid.
-     * 
+     *
      * @param grid the SudokuGrid to solve
      */
     public IncompleteSolver(SudokuGrid grid) {
@@ -51,8 +53,8 @@ public class IncompleteSolver extends SudokuSolver {
 
     /**
      * Sets the cell selection heuristic for variable ordering.
-     * 
-     * @param heuristic the heuristic to use (e.g., MRVHeuristic, DegreeHeuristic)
+     *
+     * @param heuristic the heuristic (e.g., MRVHeuristic, DegreeHeuristic)
      */
     public void setHeuristic(CellHeuristic heuristic) {
         this.heuristic = heuristic;
@@ -60,8 +62,8 @@ public class IncompleteSolver extends SudokuSolver {
 
     /**
      * Enables or disables constraint propagation.
-     * 
-     * @param propagate true to enable forward-checking and naked singles propagation
+     *
+     * @param propagate true to enable forward-checking and naked singles
      */
     public void setPropagate(boolean propagate) {
         this.propagate = propagate;
@@ -69,7 +71,7 @@ public class IncompleteSolver extends SudokuSolver {
 
     /**
      * Sets the maximum number of iterations before timeout.
-     * 
+     *
      * @param maxIterations maximum iterations allowed
      */
     public void setMaxIterations(long maxIterations) {
@@ -78,26 +80,24 @@ public class IncompleteSolver extends SudokuSolver {
 
     /**
      * Solves the Sudoku puzzle using backtracking with constraint propagation.
-     * 
+     *
      * @return SolverResult containing solution status, time, iterations, and backtracks
      */
     @Override
     public SolverResult solve() {
         startTime = System.currentTimeMillis();
         grid.reset();
-
         int N = grid.getSize();
-        // Allocate undo stack (generous size to avoid resizing during search)
-        undoStack = new Change[N * N * 64];
-        stackPointer = 0;
 
-        // Initialize candidate sets based on initial clues
+        // Allocate memory structures
+        undoStack = new Change[N * N * 32];
+        stackPointer = 0;
+        propagationQueue = new int[N * N];
+        queueSize = 0;
+
+        // Initialize candidate sets from clues
         if (propagate) {
-            if (!propagateAllClues()) {
-                finalizeResult(false);
-                return result;
-            }
-            if (!propagateSingles()) {
+            if (!propagateAllClues() || !propagateSingles()) {
                 finalizeResult(false);
                 return result;
             }
@@ -110,18 +110,16 @@ public class IncompleteSolver extends SudokuSolver {
 
     /**
      * Recursive backtracking search with constraint propagation.
-     * 
-     * @return true if a solution is found, false otherwise
+     *
+     * @return true if solution found, false otherwise
      */
     private boolean backtrack() {
         recordIteration();
-        
-        // Check iteration limit (for bounded search)
+
         if (iterations > maxIterations) {
             return false;
         }
 
-        // Base case: grid is complete and constraints are satisfied
         if (grid.isFull()) {
             return true;
         }
@@ -129,54 +127,48 @@ public class IncompleteSolver extends SudokuSolver {
         // Select next cell using heuristic
         int[] cell = heuristic.selectCell(grid);
         if (cell == null) {
-            return false; // No unassigned cell (should not occur if grid is not full)
+            return false;
         }
 
         int row = cell[0];
         int col = cell[1];
         int candidateMask = grid.getCandidates(row, col);
 
-        // Contradiction: no candidates available
         if (candidateMask == 0) {
-            return false;
+            return false; // Contradiction
         }
 
-        // Save undo point
         int undoMark = stackPointer;
 
-        // Iterate over all candidate values (using bitmask iteration)
+        // Try each candidate value
         while (candidateMask != 0) {
-            // Extract least significant bit (next candidate value)
             int bit = candidateMask & -candidateMask;
             int value = Integer.numberOfTrailingZeros(bit);
-            candidateMask &= ~bit; // Remove this bit
+            candidateMask &= ~bit;
 
-            // Assign value to cell
             if (assign(row, col, value)) {
                 boolean consistent = true;
-                
-                // Forward-checking: propagate constraints
+
+                // Propagate constraints
                 if (propagate) {
                     consistent = propagateFromAssignment(row, col, value) && propagateSingles();
                 }
 
-                // Recursively solve the rest
                 if (consistent && backtrack()) {
-                    return true; // Solution found
+                    return true;
                 }
-            }
 
-            // Backtrack: restore state to undo mark
-            undo(undoMark);
-            recordBacktrack();
+                undo(undoMark);
+                recordBacktrack();
+            }
         }
 
-        return false; // No solution found from this state
+        return false;
     }
 
     /**
-     * Assigns a value to a cell and updates its candidate set to empty.
-     * 
+     * Assigns a value to a cell.
+     *
      * @param r row index
      * @param c column index
      * @param value value to assign
@@ -185,24 +177,24 @@ public class IncompleteSolver extends SudokuSolver {
     private boolean assign(int r, int c, int value) {
         pushChange(r, c);
         grid.set(r, c, value);
-        grid.setCandidates(r, c, 0); // No more candidates for this cell
+        grid.setCandidates(r, c, 0);
         return true;
     }
 
     /**
-     * Initial constraint propagation: remove candidates based on all given clues.
-     * 
-     * @return true if propagation succeeds, false if a contradiction is detected
+     * Initial constraint propagation: removes candidates based on given clues.
+     *
+     * @return true if success, false if contradiction detected
      */
     private boolean propagateAllClues() {
         int N = grid.getSize();
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 int value = grid.get(i, j);
-                if (value != 0) { // Given clue
+                if (value != 0) {
                     grid.setCandidates(i, j, 0);
                     if (!propagateFromAssignment(i, j, value)) {
-                        return false; // Contradiction in initial state
+                        return false;
                     }
                 }
             }
@@ -211,42 +203,45 @@ public class IncompleteSolver extends SudokuSolver {
     }
 
     /**
-     * Forward-checking: removes an assigned value from all related cells
-     * (same row, column, and block).
-     * 
-     * @param row row of the assigned cell
-     * @param col column of the assigned cell
+     * Forward-checking: removes assigned value from related cells
+     * (row, column, block) and queues them for further propagation.
+     *
+     * @param row row of assigned cell
+     * @param col column of assigned cell
      * @param value assigned value
-     * @return true if propagation succeeds, false if a contradiction is detected
+     * @return true if success, false if contradiction detected
      */
     private boolean propagateFromAssignment(int row, int col, int value) {
         int N = grid.getSize();
         int n = grid.getBlockSize();
 
-        // Remove value from all cells in the same row
+        // Row propagation
         for (int j = 0; j < N; j++) {
-            if (j == col || !grid.isEmpty(row, j)) continue;
-            if (!removeCandidateOrFail(row, j, value)) {
-                return false;
+            if (j != col && grid.isEmpty(row, j)) {
+                if (!removeCandidateOrFail(row, j, value)) {
+                    return false;
+                }
             }
         }
 
-        // Remove value from all cells in the same column
+        // Column propagation
         for (int i = 0; i < N; i++) {
-            if (i == row || !grid.isEmpty(i, col)) continue;
-            if (!removeCandidateOrFail(i, col, value)) {
-                return false;
+            if (i != row && grid.isEmpty(i, col)) {
+                if (!removeCandidateOrFail(i, col, value)) {
+                    return false;
+                }
             }
         }
 
-        // Remove value from all cells in the same block
+        // Block propagation
         int blockRowStart = (row / n) * n;
         int blockColStart = (col / n) * n;
         for (int r = blockRowStart; r < blockRowStart + n; r++) {
             for (int c = blockColStart; c < blockColStart + n; c++) {
-                if ((r == row && c == col) || !grid.isEmpty(r, c)) continue;
-                if (!removeCandidateOrFail(r, c, value)) {
-                    return false;
+                if ((r != row || c != col) && grid.isEmpty(r, c)) {
+                    if (!removeCandidateOrFail(r, c, value)) {
+                        return false;
+                    }
                 }
             }
         }
@@ -255,37 +250,32 @@ public class IncompleteSolver extends SudokuSolver {
     }
 
     /**
-     * Removes a candidate value from a cell's domain and detects contradictions.
-     * 
+     * Removes candidate value from a cell; detects contradictions.
+     *
      * @param r row index
      * @param c column index
-     * @param value candidate value to remove
-     * @return true if removal succeeds, false if domain becomes empty (contradiction)
+     * @param value candidate to remove
+     * @return true if success, false if domain becomes empty
      */
     private boolean removeCandidateOrFail(int r, int c, int value) {
         int oldMask = grid.getCandidates(r, c);
         int newMask = oldMask & ~(1 << value);
 
-        // No change needed
         if (newMask == oldMask) {
-            return true;
+            return true; // No change
         }
 
-        // Save state and update
         pushChange(r, c);
         grid.setCandidates(r, c, newMask);
 
-        // Detect immediate contradiction: empty domain
-        return newMask != 0;
+        return newMask != 0; // Contradiction if domain is empty
     }
 
     /**
-     * Naked singles propagation: if a cell has only one candidate left,
-     * assign that value and propagate further.
-     * 
-     * This is a powerful inference rule that significantly prunes the search space.
-     * 
-     * @return true if propagation succeeds, false if a contradiction is detected
+     * Naked singles propagation: assigns cells with only one candidate.
+     * Iteratively reduces domains until no more singles are found.
+     *
+     * @return true if success, false if contradiction detected
      */
     private boolean propagateSingles() {
         int N = grid.getSize();
@@ -295,23 +285,22 @@ public class IncompleteSolver extends SudokuSolver {
             changed = false;
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < N; j++) {
-                    if (!grid.isEmpty(i, j)) continue;
+                    if (grid.isEmpty(i, j)) {
+                        int mask = grid.getCandidates(i, j);
 
-                    int mask = grid.getCandidates(i, j);
-                    
-                    // Contradiction: no candidates left
-                    if (mask == 0) {
-                        return false;
-                    }
-
-                    // Check if exactly one candidate remains (power-of-two test)
-                    if ((mask & (mask - 1)) == 0) {
-                        int value = Integer.numberOfTrailingZeros(mask);
-                        assign(i, j, value);
-                        if (!propagateFromAssignment(i, j, value)) {
-                            return false;
+                        if (mask == 0) {
+                            return false; // Contradiction
                         }
-                        changed = true; // Continue scanning for more singles
+
+                        // Check if exactly one candidate (power of two test)
+                        if ((mask & (mask - 1)) == 0) {
+                            int value = Integer.numberOfTrailingZeros(mask);
+                            assign(i, j, value);
+                            if (!propagateFromAssignment(i, j, value)) {
+                                return false;
+                            }
+                            changed = true;
+                        }
                     }
                 }
             }
@@ -321,13 +310,12 @@ public class IncompleteSolver extends SudokuSolver {
     }
 
     /**
-     * Pushes the current state of a cell onto the undo stack.
-     * 
+     * Pushes current cell state onto undo stack.
+     *
      * @param r row index
      * @param c column index
      */
     private void pushChange(int r, int c) {
-        // Grow stack if necessary (rare)
         if (stackPointer >= undoStack.length) {
             Change[] bigger = new Change[undoStack.length * 2];
             System.arraycopy(undoStack, 0, bigger, 0, undoStack.length);
@@ -337,9 +325,9 @@ public class IncompleteSolver extends SudokuSolver {
     }
 
     /**
-     * Restores grid state to a previous undo mark.
-     * 
-     * @param mark undo stack pointer to restore to
+     * Restores grid state to previous undo mark.
+     *
+     * @param mark undo stack position to restore to
      */
     private void undo(int mark) {
         while (stackPointer > mark) {

@@ -3,21 +3,22 @@ package src.heuristic;
 import src.model.SudokuGrid;
 
 /**
- * Degree heuristic for variable ordering with MRV tie-breaking.
- * 
- * Primary criterion: selects the cell with the fewest candidates (MRV).
- * Tie-breaker: among cells with equal candidates, selects the one that
- * constrains the most other empty cells (highest degree).
- * 
- * The degree of a cell is the number of empty cells in its row, column, and block.
+ * Optimized Degree Heuristic for variable ordering.
+ *
+ * Combines Minimum Remaining Values (MRV) with Degree tie-breaking.
+ * - Primary criterion: cell with fewest candidates (fail-first)
+ * - Tie-breaker: cell constraining most other empty cells (highest degree)
+ *
+ * Degree = count of empty cells in same row, column, and block.
+ * More constraining cells are prioritized for earlier constraint propagation.
  */
 public class DegreeHeuristic implements CellHeuristic {
 
     /**
-     * Selects the next cell to fill using the Degree heuristic.
-     * 
+     * Selects the next cell to fill using MRV with Degree tie-breaking.
+     *
      * @param grid the current Sudoku grid state
-     * @return int array [row, col] of the selected cell, or null if no empty cell exists
+     * @return int array [row, col] of selected cell, or null if no empty cell exists
      */
     @Override
     public int[] selectCell(SudokuGrid grid) {
@@ -28,22 +29,37 @@ public class DegreeHeuristic implements CellHeuristic {
         int minCandidates = Integer.MAX_VALUE;
         int maxDegree = -1;
 
-        // Scan all cells to find the best candidate
+        // Scan grid to find best cell
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
-                if (!grid.isEmpty(i, j)) continue;
+                if (!grid.isEmpty(i, j)) {
+                    continue;
+                }
 
                 int candidateCount = Integer.bitCount(grid.getCandidates(i, j));
-                int degree = computeDegree(grid, i, j, n);
 
-                // Primary: fewer candidates (MRV)
-                // Secondary: higher degree (more constraining)
-                if (candidateCount < minCandidates ||
-                    (candidateCount == minCandidates && degree > maxDegree)) {
+                // Early exit optimization
+                if (candidateCount == 0) {
+                    continue; // Skip empty domains
+                }
+                if (candidateCount == 1) {
+                    return new int[]{i, j}; // Can't do better than 1 candidate
+                }
+
+                // Compute degree only when needed for comparison
+                if (candidateCount < minCandidates) {
                     minCandidates = candidateCount;
-                    maxDegree = degree;
+                    maxDegree = computeDegree(grid, i, j, n);
                     bestRow = i;
                     bestCol = j;
+                } else if (candidateCount == minCandidates) {
+                    // Tie-break by degree
+                    int degree = computeDegree(grid, i, j, n);
+                    if (degree > maxDegree) {
+                        maxDegree = degree;
+                        bestRow = i;
+                        bestCol = j;
+                    }
                 }
             }
         }
@@ -52,40 +68,44 @@ public class DegreeHeuristic implements CellHeuristic {
     }
 
     /**
-     * Computes the degree of a cell: the number of related empty cells.
-     * 
-     * Related cells are those in the same row, column, or block.
-     * 
+     * Computes degree of a cell: count of empty cells in row, column, and block.
+     *
+     * Degree represents how many other cells are constrained by this cell,
+     * so higher degree cells tend to lead to faster constraint propagation.
+     *
      * @param grid the Sudoku grid
-     * @param row row index of the cell
-     * @param col column index of the cell
+     * @param row row index of cell
+     * @param col column index of cell
      * @param n block size
      * @return degree (number of constrained empty cells)
      */
     private int computeDegree(SudokuGrid grid, int row, int col, int n) {
         int N = grid.getSize();
         int degree = 0;
+        boolean[] counted = new boolean[N * N]; // Avoid double-counting cells at intersections
 
-        // Count empty cells in the same row
+        // Count empty cells in row
         for (int j = 0; j < N; j++) {
             if (j != col && grid.isEmpty(row, j)) {
                 degree++;
+                counted[row * N + j] = true;
             }
         }
 
-        // Count empty cells in the same column
+        // Count empty cells in column (excluding already counted)
         for (int i = 0; i < N; i++) {
-            if (i != row && grid.isEmpty(i, col)) {
+            if (i != row && grid.isEmpty(i, col) && !counted[i * N + col]) {
                 degree++;
+                counted[i * N + col] = true;
             }
         }
 
-        // Count empty cells in the same block
+        // Count empty cells in block (excluding already counted)
         int blockRowStart = (row / n) * n;
         int blockColStart = (col / n) * n;
         for (int r = blockRowStart; r < blockRowStart + n; r++) {
             for (int c = blockColStart; c < blockColStart + n; c++) {
-                if ((r != row || c != col) && grid.isEmpty(r, c)) {
+                if ((r != row || c != col) && grid.isEmpty(r, c) && !counted[r * N + c]) {
                     degree++;
                 }
             }
