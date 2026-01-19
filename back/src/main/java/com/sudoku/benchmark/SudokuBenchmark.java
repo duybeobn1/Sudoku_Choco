@@ -94,7 +94,7 @@ public class SudokuBenchmark {
 
                 // Config 2: InputOrder + Luby
                 testComplete(grid, filename, difficulty, streamer, fileWriter,
-                        SearchStrategy.INPUT_ORDER, ValueHeuristic.MIN, "DEFAULT", RestartType.LUBY, 100, 2);
+                        SearchStrategy.INPUT_ORDER, ValueHeuristic.MIN, "AC", RestartType.LUBY, 100, 2);
 
                 // Config 3: DomOverWDeg (Smart)
                 testComplete(grid, filename, difficulty, streamer, fileWriter,
@@ -201,7 +201,7 @@ public class SudokuBenchmark {
 
                 // Config 2: InputOrder + Luby
                 testComplete(grid, filename, difficulty, streamer, fileWriter,
-                        SearchStrategy.INPUT_ORDER, ValueHeuristic.MIN, "DEFAULT", RestartType.LUBY, 100, 2);
+                        SearchStrategy.INPUT_ORDER, ValueHeuristic.MIN, "AC", RestartType.LUBY, 100, 2);
 
                 // Config 3: DomOverWDeg (Smart)
                 testComplete(grid, filename, difficulty, streamer, fileWriter,
