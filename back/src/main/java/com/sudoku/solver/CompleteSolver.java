@@ -1,20 +1,26 @@
 package com.sudoku.solver;
 
-import com.sudoku.model.SolverResult;
-import com.sudoku.model.SudokuGrid;
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.search.limits.FailCounter;
 import org.chocosolver.solver.search.strategy.Search;
-import org.chocosolver.solver.search.strategy.selectors.values.*;
-import org.chocosolver.solver.search.strategy.selectors.variables.*;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMax;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMiddle;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainMin;
+import org.chocosolver.solver.search.strategy.selectors.values.IntDomainRandom;
+import org.chocosolver.solver.search.strategy.selectors.values.IntValueSelector;
+import org.chocosolver.solver.search.strategy.selectors.variables.FirstFail;
+import org.chocosolver.solver.search.strategy.selectors.variables.InputOrder;
 import org.chocosolver.solver.search.strategy.strategy.IntStrategy;
 import org.chocosolver.solver.variables.IntVar;
+
+import com.sudoku.model.SolverResult;
+import com.sudoku.model.SudokuGrid;
 
 public class CompleteSolver extends SudokuSolver {
 
     // Enums pour configuration externe
-    public enum SearchStrategy { INPUT_ORDER, DOM_OVER_WDEG, MIN_DOM_SIZE, RANDOM }
+    public enum SearchStrategy { INPUT_ORDER, DOM_OVER_WDEG, MIN_DOM_SIZE }
     public enum ValueHeuristic { MIN, MAX, MIDDLE, RANDOM_VAL }
     public enum RestartType { NONE, LUBY, GEOMETRIC }
 
@@ -108,9 +114,6 @@ public class CompleteSolver extends SudokuSolver {
                 break;
             case MIN_DOM_SIZE:
                 intStrategy = Search.intVarSearch(new FirstFail(model), valSel, allVars);
-                break;
-            case RANDOM:
-                intStrategy = Search.randomSearch(allVars, 0);
                 break;
             default: // DOM_OVER_WDEG
                 intStrategy = (IntStrategy) Search.domOverWDegSearch(allVars); // Uses Min domain by default

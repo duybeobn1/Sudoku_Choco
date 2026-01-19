@@ -1,14 +1,26 @@
 package com.sudoku.benchmark;
 
-import com.sudoku.heuristics.*;
-import com.sudoku.model.*;
-import com.sudoku.solver.*;
-import com.sudoku.solver.CompleteSolver.*; // Enums
-import com.sudoku.util.MiniZincParser;
-
-import java.io.*;
-import java.nio.file.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream; // Enums
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.function.Consumer;
+
+import com.sudoku.heuristics.DegreeHeuristic;
+import com.sudoku.heuristics.MRVHeuristic;
+import com.sudoku.model.SolverResult;
+import com.sudoku.model.SudokuGrid;
+import com.sudoku.solver.CompleteSolver;
+import com.sudoku.solver.CompleteSolver.RestartType;
+import com.sudoku.solver.CompleteSolver.SearchStrategy;
+import com.sudoku.solver.CompleteSolver.ValueHeuristic;
+import com.sudoku.solver.GreedyIncompleteSolver;
+import com.sudoku.solver.IncompleteSolver;
+import com.sudoku.solver.SudokuSolver;
+import com.sudoku.util.MiniZincParser;
 
 public class SudokuBenchmark {
 
@@ -103,7 +115,47 @@ public class SudokuBenchmark {
                 // Config 5: Random + Geometric
                 testComplete(grid, filename, difficulty, streamer, fileWriter,
                         SearchStrategy.DOM_OVER_WDEG, ValueHeuristic.RANDOM_VAL, "DEFAULT", RestartType.GEOMETRIC, 10, 1.1);
+                
+                // --- DOM OVER WDEG VARIATIONS ---
 
+                // Config 6: The "Champion" Candidate (Max Val + AC + Luby 500)
+                // Rationale: Previous logs showed MAX heuristic + AC solved Hard instances instantly. 
+                // Luby 500 gives enough time to learn weights before restarting.
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.DOM_OVER_WDEG, ValueHeuristic.MAX, "AC", RestartType.LUBY, 500, 2);
+
+                // Config 7: Geometric Growth (Fast start, wide search)
+                // Rationale: Geometric restarts (x1.5) grow faster than Luby. 
+                // Combined with MIN value to see if standard ordering works better with aggressive restarts.
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.DOM_OVER_WDEG, ValueHeuristic.MIN, "DEFAULT", RestartType.GEOMETRIC, 100, 1.5);
+
+                // Config 8: High Frequency Learning (Low Luby Base)
+                // Rationale: A very low Luby base (10) forces frequent restarts early on. 
+                // This forces DomOverWDeg to update weights very rapidly in the beginning.
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.DOM_OVER_WDEG, ValueHeuristic.RANDOM_VAL, "AC", RestartType.LUBY, 10, 2);
+
+
+                // --- MIN DOM SIZE VARIATIONS ---
+
+                // Config 9: Classic "First-Fail" (MinDom + AC)
+                // Rationale: MinDomSize works best when domains are kept small by Arc Consistency (AC).
+                // This is the "Textbook" constraint programming approach.
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.MIN_DOM_SIZE, ValueHeuristic.MIN, "AC", RestartType.LUBY, 200, 2);
+
+                // Config 10: Randomized First-Fail
+                // Rationale: MinDom usually picks the "hardest" variable, but if we pick the wrong value (MIN), we get stuck.
+                // RANDOM_VAL helps escape the specific value trap while still focusing on difficult variables.
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.MIN_DOM_SIZE, ValueHeuristic.RANDOM_VAL, "DEFAULT", RestartType.GEOMETRIC, 50, 1.2);
+                // Config 11: Randomized First-Fail with AC
+                // Rationale: Combining RANDOM_VAL with AC to maintain arc consistency while exploring.
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.MIN_DOM_SIZE, ValueHeuristic.RANDOM_VAL, "AC", RestartType.LUBY, 100, 2);
+
+                        
                 // ==========================
                 // 2. INCOMPLETE SOLVERS
                 // ==========================
