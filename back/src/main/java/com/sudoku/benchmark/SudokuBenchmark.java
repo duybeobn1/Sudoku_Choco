@@ -14,10 +14,32 @@ public class SudokuBenchmark {
 
     private static final String BASE_URL = "https://www.hakank.org/minizinc/sudoku_problems2/";
     private static final String LOCAL_DIR = "benchmarks_data";
-    private static final int[] EASY = {0};
-    private static final int[] MEDIUM = {36};
-    private static final int[] HARD = {89};
     private static final String CSV_FILE = "benchmark_results.csv";
+    private static final int[] EASY = {0, 5, 8};
+    private static final int[] MEDIUM = {36, 41, 44};
+    private static final int[] HARD = {89};
+    private static final String[] GENERATED = {
+        "sudoku_16x16_01.dzn",
+        "sudoku_16x16_02.dzn",
+        "sudoku_16x16_03.dzn",
+        "sudoku_16x16_04.dzn",
+        "sudoku_16x16_05.dzn",
+        "sudoku_16x16_06.dzn",
+        "sudoku_16x16_07.dzn",
+        "sudoku_16x16_08.dzn",
+        "sudoku_16x16_09.dzn",
+        "sudoku_16x16_10.dzn",
+        "sudoku_25x25_01.dzn",
+        "sudoku_25x25_02.dzn",
+        "sudoku_25x25_03.dzn",
+        "sudoku_25x25_04.dzn",
+        "sudoku_25x25_05.dzn",
+        "sudoku_25x25_06.dzn",
+        "sudoku_25x25_07.dzn",
+        "sudoku_25x25_08.dzn",
+        "sudoku_25x25_09.dzn",
+        "sudoku_25x25_10.dzn"
+    };
 
     public static void runBenchmark(Consumer<String> resultStreamer) {
         // We use a FileWriter to persist results to disk alongside streaming them
@@ -39,6 +61,7 @@ public class SudokuBenchmark {
             runSuite(EASY, "Easy", resultStreamer, fileWriter);
             runSuite(MEDIUM, "Medium", resultStreamer, fileWriter);
             runSuite(HARD, "Hard", resultStreamer, fileWriter);
+            runGeneratedSuite(GENERATED, "Generated", resultStreamer, fileWriter);
             
             System.out.println("Benchmark finished. Results saved to " + CSV_FILE);
 
@@ -53,6 +76,65 @@ public class SudokuBenchmark {
             String filename = "sudoku_p" + index + ".dzn";
             try {
                 File file = downloadIfNotExists(filename);
+                
+                MiniZincParser.SudokuInstance instance = MiniZincParser.parse(file, difficulty);
+                SudokuGrid grid = new SudokuGrid(instance.grid, instance.n);
+
+                // ==========================
+                // 1. COMPLETE SOLVER CONFIGS
+                // ==========================
+                
+                // Config 1: Baseline
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.INPUT_ORDER, ValueHeuristic.MIN, "DEFAULT", RestartType.NONE, 0, 0);
+
+                // Config 2: InputOrder + Luby
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.INPUT_ORDER, ValueHeuristic.MIN, "DEFAULT", RestartType.LUBY, 100, 2);
+
+                // Config 3: DomOverWDeg (Smart)
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.DOM_OVER_WDEG, ValueHeuristic.MIN, "DEFAULT", RestartType.NONE, 0, 0);
+
+                // Config 4: DomOverWDeg + Luby + AC
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.DOM_OVER_WDEG, ValueHeuristic.MIN, "AC", RestartType.LUBY, 100, 2);
+
+                // Config 5: Random + Geometric
+                testComplete(grid, filename, difficulty, streamer, fileWriter,
+                        SearchStrategy.DOM_OVER_WDEG, ValueHeuristic.RANDOM_VAL, "DEFAULT", RestartType.GEOMETRIC, 10, 1.1);
+
+                // ==========================
+                // 2. INCOMPLETE SOLVERS
+                // ==========================
+
+                // MRV
+                IncompleteSolver incMrv = new IncompleteSolver(grid);
+                incMrv.setHeuristic(new MRVHeuristic());
+                testSolver(incMrv, "Incomplete_MRV", "-", "-", "-", "-", filename, difficulty, streamer, fileWriter);
+
+                // Degree
+                IncompleteSolver incDeg = new IncompleteSolver(grid);
+                incDeg.setHeuristic(new DegreeHeuristic());
+                testSolver(incDeg, "Incomplete_Degree", "-", "-", "-", "-", filename, difficulty, streamer, fileWriter);
+
+                // Greedy
+                testSolver(new GreedyIncompleteSolver(grid), "Greedy_MRV", "-", "-", "-", "-", filename, difficulty, streamer, fileWriter);
+
+            } catch (Exception e) {
+                System.err.println("Error processing " + filename + ": " + e.getMessage());
+            }
+        }
+    }
+
+    private static void runGeneratedSuite(String[] filenames, String difficulty, Consumer<String> streamer, PrintWriter fileWriter) {
+        for (String filename : filenames) {
+            try {
+                File file = new File(LOCAL_DIR + "/generates/generated_instances/" + filename);
+                if (!file.exists()) {
+                    System.err.println("File not found: " + file.getPath());
+                    continue;
+                }
                 
                 MiniZincParser.SudokuInstance instance = MiniZincParser.parse(file, difficulty);
                 SudokuGrid grid = new SudokuGrid(instance.grid, instance.n);

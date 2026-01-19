@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sudoku Solver - Tool</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="index.html" class="navbar-brand">Sudoku Solver Pro</a>
+      <div class="navbar-nav">
+        <!-- 'active' class highlights the current page -->
+        <a href="solver.html" class="nav-btn active">Solver</a>
+        <a href="benchmark.html" class="nav-btn">Benchmark</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    <div id="solver">
+      <h1>Interactive Solver</h1>
+
+      <div class="tool-panel">
+        <h3>Configuration</h3>
+
+        <div class="controls-row">
+            <div class="control-group">
+                <label>Grid Size</label>
+                <select id="gridSize">
+                    <option value="2">4x4</option>
+                    <option value="3" selected>9x9</option>
+                    <option value="4">16x16</option>
+                    <option value="5">25x25</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Load Example</label>
+                <select id="loadExample">
+                    <option value="">-- Custom --</option>
+                    <option value="0">Easy (p0)</option>
+                    <option value="36">Medium (p36)</option>
+                    <option value="89">Hard (p89)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Solver Type</label>
+                <select id="solverType">
+                    <option value="complete">Complete (Choco)</option>
+                    <option value="incomplete" selected>Incomplete (Backtracking)</option>
+                    <option value="greedy">Greedy (Fast)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Actions</label>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btnSolve" class="btn-solve">Solve</button>
+                    <button id="btnReset" class="btn-reset-puzzle">Reset</button>
+                    <button id="btnClear" class="btn-clear-all">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusMessage" class="status-message"></div>
+      </div>
+
+      <div class="solver-container">
+        <div id="sudokuGrid" class="sudoku-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="api.js"></script>
+  <script src="solver.js"></script>
+</body>
+</html>

@@ -80,6 +80,8 @@ h1 {
   font-weight: 600;
   font-size: 14px;
   transition: all 0.2s;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .nav-btn:hover {
@@ -87,16 +89,13 @@ h1 {
   background: #f0fdfa;
 }
 
+/* Used for the current active page */
 .nav-btn.active {
   background: var(--primary);
   color: white;
 }
 
-/* --- Modules (Tabs) --- */
-.module { display: none; }
-.module.active { display: block; }
-
-/* --- Solver Module --- */
+/* --- Tool Panels --- */
 .tool-panel {
   background: var(--bg-surface);
   padding: 20px;
@@ -190,12 +189,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   color: #333;
   padding: 0;
 }
-
-/* Thick borders for 3x3 blocks */
-/* .cell:nth-child(3n) { border-right: 2px solid #333; }
-.cell:nth-child(9n) { border-right: none; }
-.cell:nth-child(n+19):nth-child(-n+27),
-.cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #333; } */
 
 .cell:focus {
   outline: none;

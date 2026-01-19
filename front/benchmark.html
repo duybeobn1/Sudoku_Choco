@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sudoku Solver - Benchmarks</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="index.html" class="navbar-brand">Sudoku Solver Pro</a>
+      <div class="navbar-nav">
+        <a href="solver.html" class="nav-btn">Solver</a>
+        <a href="benchmark.html" class="nav-btn active">Benchmark</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    <div id="benchmark">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">Performance Benchmarks</h1>
+        <button id="btnStartBenchmark" type="button" class="btn-solve" style="font-size: 16px;">Start Global Benchmark</button>
+      </div>
+
+      <!-- Added Status Message for Benchmark feedback -->
+      <div id="statusMessage" class="status-message" style="margin-bottom: 20px;"></div>
+
+      <!-- KPIs -->
+      <div class="kpis">
+        <div class="kpi">
+          <div class="kpi-label">Total Runs</div>
+          <div class="kpi-value" id="kpiTotalRuns">0</div>
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-label">Success Rate</div>
+          <div class="kpi-value" id="kpiSuccessRate">0%</div>
+        </div>
+
+        <div class="kpi">
+          <div class="kpi-label">Avg Time</div>
+          <div class="kpi-value" id="kpiAvgTime">0 ms</div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts">
+        <div class="chart-box">
+          <h3>Avg Time by Configuration (ms)</h3>
+          <canvas id="timeChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <h3>Success by Difficulty (runs)</h3>
+          <canvas id="successChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <h3>Avg Time by Method (ms)</h3>
+          <canvas id="methodTimeChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+          <h3>Success Rate by Method (%)</h3>
+          <canvas id="methodSuccessChart"></canvas>
+        </div>
+
+        <!-- Table -->
+        <div class="table-box">
+          <h3>Detailed Results</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Instance</th>
+                <th>Diff</th>
+                <th>Config</th>
+                <th>Solver</th>
+                <th>Time (ms)</th>
+                <th>Iter</th>
+                <th>Back</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="benchmarkTableBody">
+              <tr>
+                <td colspan="8" class="loading">No benchmark data yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="benchmark.js"></script>
+</body>
+</html>
