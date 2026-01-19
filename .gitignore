@@ -8,3 +8,5 @@
 oracleJdk-25.jdk/
 
 bin/
+
+back/target/
