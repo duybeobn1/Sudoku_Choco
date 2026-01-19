@@ -20,9 +20,17 @@ import com.sudoku.model.SudokuGrid;
 public class CompleteSolver extends SudokuSolver {
 
     // Enums pour configuration externe
-    public enum SearchStrategy { INPUT_ORDER, DOM_OVER_WDEG, MIN_DOM_SIZE }
-    public enum ValueHeuristic { MIN, MAX, MIDDLE, RANDOM_VAL }
-    public enum RestartType { NONE, LUBY, GEOMETRIC }
+    public enum SearchStrategy {
+        INPUT_ORDER, DOM_OVER_WDEG, MIN_DOM_SIZE
+    }
+
+    public enum ValueHeuristic {
+        MIN, MAX, MIDDLE, RANDOM_VAL
+    }
+
+    public enum RestartType {
+        NONE, LUBY, GEOMETRIC
+    }
 
     // Configuration par défaut
     private int timeoutSeconds = 60;
@@ -38,10 +46,22 @@ public class CompleteSolver extends SudokuSolver {
     }
 
     // Setters pour la configuration
-    public void setTimeout(int seconds) { this.timeoutSeconds = seconds; }
-    public void setStrategy(SearchStrategy s) { this.strategy = s; }
-    public void setValueHeuristic(ValueHeuristic v) { this.valueHeuristic = v; }
-    public void setConsistencyLevel(String c) { this.consistencyLevel = c; }
+    public void setTimeout(int seconds) {
+        this.timeoutSeconds = seconds;
+    }
+
+    public void setStrategy(SearchStrategy s) {
+        this.strategy = s;
+    }
+
+    public void setValueHeuristic(ValueHeuristic v) {
+        this.valueHeuristic = v;
+    }
+
+    public void setConsistencyLevel(String c) {
+        this.consistencyLevel = c;
+    }
+
     public void setRestart(RestartType type, int base, double factor) {
         this.restartType = type;
         this.restartBase = base;
@@ -60,8 +80,14 @@ public class CompleteSolver extends SudokuSolver {
         IntVar[] allVars = flatten(vars);
 
         // 2. Constraints
-        String consistency = consistencyLevel.equals("DEFAULT") ? "AC" : consistencyLevel; // Default to AC usually
-        
+        String consistency = consistencyLevel;
+        if (consistencyLevel.equals("DEFAULT")) {
+            if (strategy == SearchStrategy.INPUT_ORDER) {
+                consistency = "DEFAULT"; 
+            } else {
+                consistency = "AC"; // Pour DomOverWDeg, on garde la puissance
+            }
+        }
         // Rows & Cols
         for (int i = 0; i < size; i++) {
             model.allDifferent(vars[i], consistency).post();
@@ -100,10 +126,18 @@ public class CompleteSolver extends SudokuSolver {
         // Value Selector
         IntValueSelector valSel;
         switch (valueHeuristic) {
-            case MAX: valSel = new IntDomainMax(); break;
-            case MIDDLE: valSel = new IntDomainMiddle(true); break;
-            case RANDOM_VAL: valSel = new IntDomainRandom(0); break;
-            default: valSel = new IntDomainMin(); break;
+            case MAX:
+                valSel = new IntDomainMax();
+                break;
+            case MIDDLE:
+                valSel = new IntDomainMiddle(true);
+                break;
+            case RANDOM_VAL:
+                valSel = new IntDomainRandom(0);
+                break;
+            default:
+                valSel = new IntDomainMin();
+                break;
         }
 
         // Variable Selector & Strategy
@@ -123,14 +157,14 @@ public class CompleteSolver extends SudokuSolver {
 
         // Restarts
         if (restartType == RestartType.LUBY) {
-            solver.setLubyRestart(restartBase, new FailCounter(model, 1), (int)restartFactor);
+            solver.setLubyRestart(restartBase, new FailCounter(model, 1), (int) restartFactor);
         } else if (restartType == RestartType.GEOMETRIC) {
             solver.setGeometricalRestart(restartBase, restartFactor, new FailCounter(model, 1), 10000);
         }
 
         // 4. Solve
         boolean status = solver.solve();
-        
+
         if (status) {
             for (int i = 0; i < size; i++) {
                 for (int j = 0; j < size; j++) {
@@ -142,7 +176,7 @@ public class CompleteSolver extends SudokuSolver {
         this.iterations = solver.getMeasures().getNodeCount();
         this.backtracks = solver.getMeasures().getBackTrackCount();
         finalizeResult(status);
-        
+
         return result;
     }
 
