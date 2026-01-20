@@ -150,7 +150,7 @@ public class CompleteSolver extends SudokuSolver {
                 intStrategy = Search.intVarSearch(new FirstFail(model), valSel, allVars);
                 break;
             default: // DOM_OVER_WDEG
-                intStrategy = (IntStrategy) Search.domOverWDegSearch(allVars); // Uses Min domain by default
+                intStrategy = (IntStrategy) Search.domOverWDegSearch(allVars); 
                 break;
         }
         solver.setSearch(intStrategy);
