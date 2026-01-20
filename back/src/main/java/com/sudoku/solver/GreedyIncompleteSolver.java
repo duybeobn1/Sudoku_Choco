@@ -51,7 +51,6 @@ public class GreedyIncompleteSolver extends SudokuSolver {
         return false;
     }
     
-    // Copy/paste helper from IncompleteSolver for independence
     private boolean isValidPlacement(int r, int c, int v) {
         int size = grid.getSize();
         int blk = grid.getBlockSize();

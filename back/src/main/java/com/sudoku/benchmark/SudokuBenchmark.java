@@ -303,7 +303,6 @@ public class SudokuBenchmark {
 
     private static void testSolver(SudokuSolver solver, String type, String strat, String val, String cons, String rest,
             String instance, String diff, Consumer<String> streamer, PrintWriter fileWriter) {
-        // Print "Running..." to console
         String configStr = String.format("%s | %s | %s", type, strat, val);
         System.out.print("Running " + instance + " [" + configStr + "] ... ");
 
@@ -334,8 +333,7 @@ public class SudokuBenchmark {
         }
     }
 
-    // ... (Keep downloadIfNotExists, SudokuInstance, and MiniZincParser exactly as
-    // before) ...
+
     private static File downloadIfNotExists(String filename) throws IOException {
         File file = new File(LOCAL_DIR, filename);
         if (file.exists() && file.length() > 0)
@@ -357,7 +355,7 @@ public class SudokuBenchmark {
     }
 
     public static void main(String[] args) {
-        // Regenerates benchmark_results.csv in the working directory
+        // Regenerates benchmark_results.csv 
         runBenchmark(System.out::println);
     }
 }

@@ -36,7 +36,7 @@ public class CompleteSolver extends SudokuSolver {
     private int timeoutSeconds = 60;
     private SearchStrategy strategy = SearchStrategy.DOM_OVER_WDEG;
     private ValueHeuristic valueHeuristic = ValueHeuristic.MIN;
-    private String consistencyLevel = "DEFAULT"; // "AC", "BC", etc.
+    private String consistencyLevel = "DEFAULT"; // "AC"
     private RestartType restartType = RestartType.NONE;
     private int restartBase = 100;
     private double restartFactor = 1.5;

@@ -189,7 +189,7 @@ public class IncompleteSolver extends SudokuSolver {
         int oldMask = grid.getCandidates(r, c);
         int newMask = oldMask & ~(1 << value);
         
-        if (newMask == oldMask) return true; // No change
+        if (newMask == oldMask) return true; 
 
         pushChange(r, c);
         grid.setCandidates(r, c, newMask);

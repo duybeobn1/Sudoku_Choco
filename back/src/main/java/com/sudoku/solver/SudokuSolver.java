@@ -13,7 +13,7 @@ public abstract class SudokuSolver {
     protected long backtracks;
 
     public SudokuSolver(SudokuGrid grid) {
-        this.grid = new SudokuGrid(grid); // Work on a copy
+        this.grid = new SudokuGrid(grid); 
         this.result = new SolverResult(this.getClass().getSimpleName());
     }
 
